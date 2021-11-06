@@ -1,0 +1,12 @@
+# emacs
+*~
+\#*\#
+
+.pio/
+.vscode/
+
+data/cert.pem
+data/key.pem
+
+tmp/
+

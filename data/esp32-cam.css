@@ -1,0 +1,56 @@
+
+body
+{
+    font-family: Verdana, Arial, Helvetcia, sans-serif;
+    font-size: 12pt;
+    background: #E0E0E0;
+}
+
+h1
+{
+    font-size: 16pt;
+    font-weight: bold;
+    color: #DF631F;
+}
+
+h2
+{
+    font-size: 14pt;
+    font-weight: bold;
+    color: #883515;
+}
+
+.resizer
+{
+    width: 800px;
+    height: 600px;
+
+    border-width: 1px;
+    border-color: black;
+    border-style: solid;
+    
+    display:flex;
+    margin:0;
+    padding:0;
+    resize:both;
+    overflow:hidden
+}
+.resizer > .resized
+{
+    flex-grow:1;
+    margin:0;
+    padding:0;
+    border:0
+}
+
+a
+{
+    font-size: 12pt;
+    font-weight: bold;
+    background-color: #DF631F;
+    color: white;
+    border: none;
+    border-radius: 0.5ex;
+    padding: 0.5ex;
+    text-decoration: none;
+}
