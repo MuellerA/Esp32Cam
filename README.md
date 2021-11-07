@@ -18,6 +18,8 @@ openssl req -x509 -subj "/CN=ESP32-CAM" -nodes -days 9999 -newkey ec:<(openssl e
 
 ## TODO
 
-* http redirect
+* OTA
 * http stream
 * html,js options
+* replace WiFiManager
+* remove Arduino

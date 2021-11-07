@@ -4,21 +4,32 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <link rel="stylesheet" type="text/css" href="esp32-cam.css">
+    <link rel="icon" type="image/png" sizes="32x32" href="/camera-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/camera-16.png">
     <script type="text/javascript" charset="utf-8" src="esp32-cam.js"></script>
     <title>ESP32-CAM</title>
   </head>
 
   <body onload="main()">
-    <h1>ESP32-CAM</h1>
+    <h1>
+      <div class="dropdown">
+        <a onclick="menu()" class="dropdown-button" style="vertical-align: middle;">☰</a>
+        <div id="menu-content" class="dropdown-content" style="display: none;">
+          <ul>
+            <li>1
+            <li>2
+          </ul>
+        </div>
+      </div>
+      ESP32-CAM
+    </h1>
 
     <p><a href="capture.jpg" target="image">Single</a> <a href="stream" target="image">Stream</a></p>    
       
-    <div class="resizer"">
+    <div class="resizer">
       <iframe class="resized" name="image" src="capture.jpg">browser does not support iframe</iframe>
     </div>
 
-    <p><a href="capture.jpg">Klick</a></p>
-    
   </body>
   
 </html>

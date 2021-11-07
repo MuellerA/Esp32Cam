@@ -128,7 +128,7 @@ bool Camera::capture(Data &data)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-static const std::vector<httpd_uri_t> uris
+static const httpd_uri_t uris[] =
   {
    {
     "/",
@@ -139,6 +139,26 @@ static const std::vector<httpd_uri_t> uris
     "/index.html",
     HTTP_GET,
     [](httpd_req_t *req){ return HTTPD::redirect(req, "esp32-cam.html") ; }
+   },
+   {
+    "/favicon.ico",
+    HTTP_GET,
+    [](httpd_req_t *req){ return HTTPD::getFile(req, "image/x-icon", "camera-40.ico") ; }
+   },
+   {
+    "/camera-16.png",
+    HTTP_GET,
+    [](httpd_req_t *req){ return HTTPD::getFile(req, "image/png", "camera-16.png") ; }
+   },
+   {
+    "/camera-32.png",
+    HTTP_GET,
+    [](httpd_req_t *req){ return HTTPD::getFile(req, "image/png", "camera-32.png") ; }
+   },
+   {
+    "/camera-64.png",
+    HTTP_GET,
+    [](httpd_req_t *req){ return HTTPD::getFile(req, "image/png", "camera-64.png") ; }
    },
    {
     "/esp32-cam.html",
@@ -156,57 +176,62 @@ static const std::vector<httpd_uri_t> uris
     [](httpd_req_t *req){ return HTTPD::getFile(req, "text/javascript", "esp32-cam.js") ; }
    },
    {
-     "/capture.jpg",
-       HTTP_GET,
-       [](httpd_req_t *req)
-       {
-         Data data ;
-         if (!camera.capture(data))
-           return ESP_FAIL ;
+    "/capture.jpg",
+    HTTP_GET,
+    [](httpd_req_t *req)
+    {
+      Data data ;
+      if (!camera.capture(data))
+      {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "camera capture failed") ;
+        return ESP_FAIL ;
+      }
          
-         httpd_resp_set_type(req, "image/jpeg") ;
-         httpd_resp_send(req, (const char*) data.data(), data.size()) ;
+      httpd_resp_set_type(req, "image/jpeg") ;
+      httpd_resp_send(req, (const char*) data.data(), data.size()) ;
 
-         return ESP_OK ;
-       }
-    },
-    {  
-      "/stream",
-        HTTP_GET,
-        [](httpd_req_t *req)
-        {
-          static std::string boundary{"esp32camstreampart"} ;
-          static std::string nl{"\r\n"} ;
-
-          esp_err_t res ;
-          std::string str ;
-          str  = "multipart/x-mixed-replace; boundary=" ;
-          str += boundary ;
-          Serial.print(str.c_str()) ;
-          if ((res = httpd_resp_set_type(req, str.c_str())) != ESP_OK)
-            return res ;
-
-          while (true) // send images
-          {
-            delay(2000) ;
-            Data data ;
-            if (!camera.capture(data))
-              return ESP_FAIL ;
-
-            char length[32] ;
-            snprintf(length, sizeof(length), "%zd", data.size()) ;
-            
-            str  = "--" + boundary + nl ;
-            str += "Content-Type: image/jpeg" + nl ;
-            str += "Content-Length: " + std::string(length) + nl ;
-            str += nl ;
-            Serial.print(str.c_str()) ;
-            if (((res = httpd_resp_send_chunk(req, str.data(), str.size())) != ESP_OK) ||
-                ((res = httpd_resp_send_chunk(req, (const char*) data.data(), data.size())) != ESP_OK))
-              return res ;
-          }
-        }
+      return ESP_OK ;
     }
+   },
+   {  
+    "/stream",
+    HTTP_GET,
+    [](httpd_req_t *req)
+    {
+      static std::string boundary{"esp32camstreampart"} ;
+      static std::string nl{"\r\n"} ;
+
+      esp_err_t res ;
+      std::string str ;
+      str  = "multipart/x-mixed-replace; boundary=" ;
+      str += boundary ;
+      Serial.print(str.c_str()) ;
+      if ((res = httpd_resp_set_type(req, str.c_str())) != ESP_OK)
+        return res ;
+
+      while (true) // send images
+      {
+        delay(2000) ;
+        Data data ;
+        if (!camera.capture(data))
+        {
+          return ESP_FAIL ;
+        }
+            
+        char length[32] ;
+        snprintf(length, sizeof(length), "%zd", data.size()) ;
+            
+        str  = "--" + boundary + nl ;
+        str += "Content-Type: image/jpeg" + nl ;
+        str += "Content-Length: " + std::string(length) + nl ;
+        str += nl ;
+        Serial.print(str.c_str()) ;
+        if (((res = httpd_resp_send_chunk(req, str.data(), str.size())) != ESP_OK) ||
+            ((res = httpd_resp_send_chunk(req, (const char*) data.data(), data.size())) != ESP_OK))
+          return res ;
+      }
+    }
+   }
   } ;
 
 HTTPD::~HTTPD()
@@ -219,6 +244,8 @@ bool HTTPD::start()
   Serial.println("HTTPD::start()") ;
   httpd_ssl_config_t cfg = HTTPD_SSL_CONFIG_DEFAULT() ;
 
+  cfg.httpd.max_uri_handlers = 16 ;
+  
   if (!spifs.read("cert.pem", _cert))
   {
     Serial.println("read cert.pem failed") ;
@@ -288,7 +315,7 @@ esp_err_t HTTPD::redirect(httpd_req_t *req, const char *location)
   
   httpd_send(req, msg.c_str(), msg.size()) ;
 
-  return ESP_OK ;
+  return ESP_FAIL ; // close connection
 }
 
 ////////////////////////////////////////////////////////////////////////////////

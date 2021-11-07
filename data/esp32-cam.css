@@ -8,16 +8,16 @@ body
 
 h1
 {
-    font-size: 16pt;
+    font-size: 200%;
     font-weight: bold;
     color: #DF631F;
 }
 
 h2
 {
-    font-size: 14pt;
+    font-size: 150%;
     font-weight: bold;
-    color: #883515;
+    color: #DF631F;
 }
 
 .resizer
@@ -53,4 +53,30 @@ a
     border-radius: 0.5ex;
     padding: 0.5ex;
     text-decoration: none;
+}
+
+a:hover
+{
+    background-color: #883515;
+}
+
+.dropdown
+{
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-button
+{
+    cursor: pointer;
+}
+
+.dropdown-content {
+    font-size: 12pt;
+    font-weight: normal;
+    position: absolute;
+    background-color: #d1d1d1;
+    min-width: 160px;
+    box-shadow: 8px 8px 8px 8px rgba(0,0,0,0.4);
+    z-index: 1;
 }
