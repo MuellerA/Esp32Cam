@@ -1,0 +1,2 @@
+global.name=❤ ESP32 CAM ❤
+test.test=TesT

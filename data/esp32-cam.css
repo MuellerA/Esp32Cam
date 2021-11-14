@@ -45,7 +45,6 @@ h2
 
 a
 {
-    font-size: 12pt;
     font-weight: bold;
     background-color: #DF631F;
     color: white;
@@ -71,12 +70,17 @@ a:hover
     cursor: pointer;
 }
 
-.dropdown-content {
-    font-size: 12pt;
+.dropdown-content
+{
     font-weight: normal;
     position: absolute;
     background-color: #d1d1d1;
-    min-width: 160px;
+    min-width: 320px;
     box-shadow: 8px 8px 8px 8px rgba(0,0,0,0.4);
     z-index: 1;
+}
+
+.name
+{
+    /* marker for js getElementsByClassName to set name */
 }

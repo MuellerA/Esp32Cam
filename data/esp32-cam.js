@@ -7,6 +7,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 var menuContent ;
+var settings ;
 
 ////////////////////////////////////////////////////////////////////////////////
 // menu
@@ -30,6 +31,16 @@ function menu()
 function main()
 {
     menuContent = document.getElementById("menu-content") ;
+
+    fetch('settings.json', { method: 'get'})
+        .then(response => response.json())
+        .then(json =>
+              {
+                  settings = json ;
+                  var name = settings.global.name
+                  if (name)
+                      for (let e of document.getElementsByClassName("name")) { e.innerText = name }
+              })
 }
 
 ////////////////////////////////////////////////////////////////////////////////
