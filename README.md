@@ -1,4 +1,4 @@
-# ESP32-CAM
+# <img src="icon/camera.svg" alt="ESP32 CAM logo" width="42px"/> ESP32 CAM 
 
 **Work in progress**
 
@@ -9,12 +9,12 @@
 pio run -t erase
 ```
 
-### Build & Upload
+### Build & Upload Firmware
 ```
 pio run -t upload
 ```
 
-### Prepare File System
+### Prepare & Upload File System
 
 * Create Certs for HTTPS (HTTPS is disabled, too many out-of-memory errors)
 
@@ -23,14 +23,13 @@ pio run -t upload
 
 * Modify Display Name in ```data/settings.txt```
 
-### Upload File System
 ```
 pio run -t uploadfs
 ```
 
 ## TODO
 
-* settings
+* more settings
 * https out of memory???
 * remove WiFiManager
 * remove Arduino?
