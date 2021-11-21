@@ -94,13 +94,16 @@ function cmd(cmd)
 //}
 
 ////////////////////////////////////////////////////////////////////////////////
-// main()
+// main() (esp32-cam.html)
 ////////////////////////////////////////////////////////////////////////////////
 
-function main()
+function main(initMenu)
 {
-    menuContent = document.getElementById("menu-content")
-    menuSettings = document.getElementById("menu-settings")
+    if (initMenu)
+    {
+        menuContent = document.getElementById("menu-content")
+        menuSettings = document.getElementById("menu-settings")
+    }
     
     fetch('settings.json', { method: 'get'})
         .then(response => response.json())
@@ -110,9 +113,36 @@ function main()
                   let name = settings.global.name
                   if (name)
                       for (let e of document.getElementsByClassName("name")) { e.innerText = name.value }
-                  buildMenu()
+                  if (initMenu)
+                      buildMenu()
               })
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// OTA (esp32-cam-ota.html)
+////////////////////////////////////////////////////////////////////////////////
+
+function uploadFirmware(inputFile)
+{
+    const msg = document.getElementById('msg');
+    let formData = new FormData() ;
+
+    msg.textContent = 'Uploading, please wait...';
+
+    formData.append("firmware.bin", inputFile.files[0]) ;
+    fetch('/ota', { method: "POST", body: formData })
+        .then(response => response.text()) // should check if response is text/plain
+        .then(text => 
+              {
+                  msg.textContent = text;
+                  if (text.includes("booting"))
+                  {
+                      new Promise(resolve => setTimeout(resolve, 6000))
+                          .then(() => { window.location.href = '/esp32-cam.html' })
+                  }
+              });
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // EOF

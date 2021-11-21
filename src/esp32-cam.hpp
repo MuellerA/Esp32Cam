@@ -7,7 +7,7 @@
 #include <esp_https_server.h>
 #include <esp_camera.h>
 #include <esp_spiffs.h>
-#include <esp_task_wdt.h>
+#include <esp_ota_ops.h>
 
 #include <string>
 #include <vector>
@@ -99,6 +99,10 @@ private:
 } ;
 
 extern Terminator terminator ;
+
+////////////////////////////////////////////////////////////////////////////////
+
+extern esp_err_t ota(httpd_req_t *req) ;
 
 ////////////////////////////////////////////////////////////////////////////////
 // EOF

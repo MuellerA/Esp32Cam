@@ -18,15 +18,16 @@ esp_err_t cmdInfo(httpd_req_t *req)
 
 const HTTPD::FileInfo HTTPD::_fileInfos[]
   {
-   { "/favicon.ico"   , "image/x-icon"             , "camera-40.ico"  },
-   { "/camera.svg"    , "image/svg+xml"            , "camera.svg"     },
-   { "/camera-16.png" , "image/png"                , "camera-16.png"  },
-   { "/camera-32.png" , "image/png"                , "camera-32.png"  },
-   { "/camera-64.png" , "image/png"                , "camera-64.png"  },
-   { "/esp32-cam.html", "text/html"                , "esp32-cam.html" },
-   { "/esp32-cam.css" , "text/css"                 , "esp32-cam.css"  },
-   { "/esp32-cam.js"  , "text/javascript"          , "esp32-cam.js"   },
-   { "/settings.txt"  , "text/plain;charset=utf-8" , "settings.txt"   },
+   { "/favicon.ico"       , "image/x-icon"             , "camera-40.ico"      },
+   { "/camera.svg"        , "image/svg+xml"            , "camera.svg"         },
+   { "/camera-16.png"     , "image/png"                , "camera-16.png"      },
+   { "/camera-32.png"     , "image/png"                , "camera-32.png"      },
+   { "/camera-64.png"     , "image/png"                , "camera-64.png"      },
+   { "/esp32-cam.html"    , "text/html"                , "esp32-cam.html"     },
+   { "/esp32-cam-ota.html", "text/html"                , "esp32-cam-ota.html" },
+   { "/esp32-cam.css"     , "text/css"                 , "esp32-cam.css"      },
+   { "/esp32-cam.js"      , "text/javascript"          , "esp32-cam.js"       },
+   { "/settings.txt"      , "text/plain;charset=utf-8" , "settings.txt"       },
   } ;
 
 static const httpd_uri_t uris[] =
@@ -140,13 +141,12 @@ static const httpd_uri_t uris[] =
         return ESP_OK ;
       }
       if (!strcmp(cmd, "info"  )) return cmdInfo(req) ;
-      if (!strcmp(cmd, "reset" ))
+      if (!strcmp(cmd, "reboot"))
       {
         terminator.hastaLaVistaBaby() ;
-        std::string msg("rebooting ...") ;
 
         httpd_resp_set_hdr(req, "Refresh", "8;URL=/") ;
-        return httpd_resp_send(req, msg.c_str(), msg.size()) ;
+        return httpd_resp_sendstr(req, "rebooting ...") ;
       }
       
       httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "file not found") ;
@@ -190,6 +190,11 @@ static const httpd_uri_t uris[] =
       httpd_resp_send(req, nullptr, 0) ;
       return ESP_OK ;      
     }
+   },
+   {
+    "/ota",
+    HTTP_POST,
+    ota
    }
   } ;
 

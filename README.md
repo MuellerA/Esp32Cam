@@ -31,8 +31,8 @@ pio run -t uploadfs
 ## TODO
 
 * settings
-* OTA
 * https out of memory???
 * remove WiFiManager
-* remove Arduino
+* remove Arduino?
 * record to sdcard
+* spiffs ota

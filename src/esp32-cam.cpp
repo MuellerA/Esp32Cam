@@ -199,6 +199,8 @@ void setup()
     ESP.restart() ;
 
   Serial.println("Setup complete") ;
+
+  esp_ota_mark_app_valid_cancel_rollback() ;
 }
 
 void terminate()
