@@ -1,19 +1,31 @@
 # ESP32-CAM
 
+**Work in progress**
 
-## Certs (RSA, ECC(NIST))
+## Install
 
+### Erase ESP flash (once)
 ```
-openssl req -newkey rsa:2048 -nodes -keyout prvtkey.pem -x509 -days 9999 -out cacert.pem -subj "/CN=ESP32-CAM"
-openssl req -x509 -subj "/CN=ESP32-CAM" -nodes -days 9999 -newkey ec:<(openssl ecparam -name prime256v1) -keyout key.pem -out cert.pem
+pio run -t erase
 ```
 
-## Erase, Build, Upload FS (data dir)
-
+### Build & Upload
 ```
-~/.platformio/penv/bin/pio --no-ansi run -d ~/PlatformIO/esp32-cam -t erase
-~/.platformio/penv/bin/pio --no-ansi run -d ~/PlatformIO/esp32-cam -t upload
-~/.platformio/penv/bin/pio --no-ansi run -d ~/PlatformIO/esp32-cam -t uploadfs
+pio run -t upload
+```
+
+### Prepare File System
+
+* Create Certs for HTTPS (HTTPS is disabled, too many out-of-memory errors)
+
+  * RSA: ```openssl req -newkey rsa:2048 -nodes -keyout data/key.pem -x509 -days 9999 -out data/cert.pem -subj "/CN=ESP32-CAM"```
+  * ECC: ```openssl req -x509 -subj "/CN=ESP32-CAM" -nodes -days 9999 -newkey ec:<(openssl ecparam -name prime256v1) -keyout data/key.pem -out data/cert.pem```
+
+* Modify Display Name in ```data/settings.txt```
+
+### Upload File System
+```
+pio run -t uploadfs
 ```
 
 ## TODO

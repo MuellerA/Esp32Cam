@@ -18,15 +18,15 @@ esp_err_t cmdInfo(httpd_req_t *req)
 
 const HTTPD::FileInfo HTTPD::_fileInfos[]
   {
-   { "/favicon.ico"   , "image/x-icon"    , "camera-40.ico"  },
-   { "/camera.svg"    , "image/svg+xml"   , "camera.svg"     },
-   { "/camera-16.png" , "image/png"       , "camera-16.png"  },
-   { "/camera-32.png" , "image/png"       , "camera-32.png"  },
-   { "/camera-64.png" , "image/png"       , "camera-64.png"  },
-   { "/esp32-cam.html", "text/html"       , "esp32-cam.html" },
-   { "/esp32-cam.css" , "text/css"        , "esp32-cam.css"  },
-   { "/esp32-cam.js"  , "text/javascript" , "esp32-cam.js"   },
-   { "/settings.txt"  , "text/plain"      , "settings.txt"   },
+   { "/favicon.ico"   , "image/x-icon"             , "camera-40.ico"  },
+   { "/camera.svg"    , "image/svg+xml"            , "camera.svg"     },
+   { "/camera-16.png" , "image/png"                , "camera-16.png"  },
+   { "/camera-32.png" , "image/png"                , "camera-32.png"  },
+   { "/camera-64.png" , "image/png"                , "camera-64.png"  },
+   { "/esp32-cam.html", "text/html"                , "esp32-cam.html" },
+   { "/esp32-cam.css" , "text/css"                 , "esp32-cam.css"  },
+   { "/esp32-cam.js"  , "text/javascript"          , "esp32-cam.js"   },
+   { "/settings.txt"  , "text/plain;charset=utf-8" , "settings.txt"   },
   } ;
 
 static const httpd_uri_t uris[] =
@@ -111,6 +111,7 @@ static const httpd_uri_t uris[] =
     HTTP_GET,
     [](httpd_req_t *req)
     {
+      httpd_resp_set_type(req, "application/json") ;
       std::string json = settings.json() ;
       return httpd_resp_send(req, json.data(), json.size()) ;
     }
@@ -132,14 +133,9 @@ static const httpd_uri_t uris[] =
       if (!strcmp(cmd, "save"  ))
       {
         if (settings.save())
-        {
-          httpd_resp_set_type(req, "text/plain") ;
-          httpd_resp_sendstr(req, "ok") ;
-        }
+          httpd_resp_send(req, nullptr, 0) ;
         else
-        {
           httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "save failed") ;
-        }
 
         return ESP_OK ;
       }
@@ -162,7 +158,37 @@ static const httpd_uri_t uris[] =
     HTTP_GET,
     [](httpd_req_t *req)
     {
-      return ESP_OK ;
+      Serial.println("/set") ;
+      char buff[1024] ;
+      size_t size = httpd_req_get_url_query_len(req) ;
+      if (!size)
+      {
+        httpd_resp_send(req, nullptr, 0) ;
+        return ESP_OK ;      
+      }
+
+      char *ch ;
+      if (((size+1) > sizeof(buff)) ||
+          (httpd_req_get_url_query_str(req, buff, size+1) != ESP_OK) ||
+          ((ch = strchr(buff, '=')) == nullptr))
+      {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "invalid parameters") ;
+        return ESP_OK ;
+      }
+          
+      std::string key(buff, (ch) - buff) ;
+      std::string val(ch+1, (buff+size) - (ch+1)) ;
+
+      Serial.println(("- " + key + " " + val).c_str()) ;
+      
+      if (!settings.set(key, val))
+      {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "invalid parameters") ;
+        return ESP_OK ;
+      }
+      
+      httpd_resp_send(req, nullptr, 0) ;
+      return ESP_OK ;      
     }
    }
   } ;

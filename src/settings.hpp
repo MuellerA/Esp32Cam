@@ -14,31 +14,57 @@ public:
   Setting(const std::string &category, const std::string &name) ;
   virtual ~Setting() ;
   
-  virtual const std::string& category() const ;
-  virtual const std::string& name() const ;
-  virtual void init(Settings &settings) ;
-  virtual bool set(Settings &settings, const std::string &value) ;
-  virtual bool get(const Settings &settings, std::string &value) const ;
-  virtual std::string json() ;
+  const std::string& category() const ;
+  const std::string& name() const ;
+  const std::string& value() const ;
+
+  virtual void init(Settings &settings) = 0 ;
+  virtual bool set(Settings &settings, const std::string &value) = 0 ;
+  virtual std::string json() = 0 ;
 protected:
   const std::string _category ;
   const std::string _name ;
   std::string _value ;
 } ;
 
-class SettingInt
-{
-public:
-  SettingInt(const std::string &category, const std::string &name, int16_t min, int16_t max) ;
-} ;
+////////////////////////////////////////////////////////////////////////////////
 
-class SettingName : public Setting
+class SettingStr : public Setting
 {
 public:
-  SettingName() ;
+  using IniFn = std::function<std::string(Settings &settings)> ;
+  using SetFn = std::function<void(Settings &settings, const std::string &value)> ;
+
+  SettingStr(const std::string &category, const std::string &name, IniFn iniFn, SetFn setFn) ;
   virtual void init(Settings &settings) ;
+  virtual bool set(Settings &settings, const std::string &value) ;
+  virtual std::string json() ;
+private:
+  IniFn _iniFn ;
+  SetFn _setFn ;
 } ;
 
+////////////////////////////////////////////////////////////////////////////////
+
+class SettingInt : public Setting
+{
+public:
+  using IniFn = std::function<int16_t(Settings &settings)> ;
+  using SetFn = std::function<void(Settings &settings, const int16_t value)> ;
+
+  static std::string to_s(int16_t i) ;
+  bool to_i(const std::string &s, int16_t &i) const ;
+  
+  SettingInt(const std::string &category, const std::string &name, IniFn iniFn, SetFn setFn, int16_t min, int16_t max) ;
+  virtual void init(Settings &settings) ;
+  virtual bool set(Settings &settings, const std::string &value) ;
+  virtual std::string json() ;
+private:
+  IniFn _iniFn ;
+  SetFn _setFn ;
+  int16_t _min ;
+  int16_t _max ;
+} ;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -55,6 +81,10 @@ public:
   bool save() const ;
   
   std::string json() const ;
+  bool set(const std::string &key, const std::string &val) ;
+  
+  const sensor_t& sensor() const ;
+  sensor_t& sensor() ;
 
 private:
   std::string _name ;
