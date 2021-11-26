@@ -8,6 +8,7 @@
 #include <esp_camera.h>
 #include <esp_spiffs.h>
 #include <esp_ota_ops.h>
+#include <mbedtls/md.h>
 
 #include <string>
 #include <vector>
@@ -85,6 +86,42 @@ private:
 } ;
 
 extern HTTPD httpd ;
+
+////////////////////////////////////////////////////////////////////////////////
+
+struct Part
+{
+  Part(const uint8_t *hb, const uint8_t *he, const uint8_t *bb, const uint8_t *be) ;
+
+  const uint8_t *_headBegin ;
+  const uint8_t *_headEnd ;
+  const uint8_t *_bodyBegin ;
+  const uint8_t *_bodyEnd ;
+} ;
+using PartByName = std::map<std::string, Part> ;
+
+extern const uint8_t* memmem(const uint8_t *buff, size_t size, const uint8_t *pattern, size_t patternSize) ;
+extern bool parseMultiPart(const uint8_t *boundary, size_t boundarySize,
+                           const uint8_t *data, size_t dataSize,
+                           PartByName &parts) ;
+
+
+////////////////////////////////////////////////////////////////////////////////
+
+class Crypt
+{
+public:
+  bool init() ;
+  bool terminate() ;
+
+  Data sha256(const Data &data) ;
+  bool pwdCheck(const Data &pwd) ;
+  
+private:
+  mbedtls_md_context_t _mdCtx ;
+} ;
+
+extern Crypt crypt ;
 
 ////////////////////////////////////////////////////////////////////////////////
 

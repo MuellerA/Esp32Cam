@@ -7,17 +7,21 @@
     <link rel="icon" type="image/png" sizes="32x32" href="camera-32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="camera-16.png">
     <script type="text/javascript" charset="utf-8" src="esp32-cam.js"></script>
-    <title class="name">ESP32-CAM OTA</title>
+    <title class="name">ESP32-CAM Wifi Setup</title>
   </head>
-  
-  <body onload="main(false)">
 
-    <h1><img src="camera.svg" height="42" style="vertical-align:-10px"> <span class="name">ESP32-CAM Over The Air Update</span></h1>
+  <body onload="main(false)">
+    
+    <h1><img src="camera.svg" height="42" style="vertical-align:-10px"> <span class="name">ESP32-CAM Wifi Setup</span></h1>
 
     <table>
       <tr>
-        <td><label for="firmware.bin">Choose firmware file to flash</label></td>
-        <td><input type="file" id="firmware" name="firmware"/></td>
+        <td><label for="wifi-ssid">Wifi SSID</label></td>
+        <td><input type="text" id="wifi-ssid" name="wifi-ssid"/></td>
+      </tr>
+      <tr>
+        <td><label for="wifi-pwd">Wifi Password</label></td>
+        <td><input type="password" id="wifi-pwd" name="wifi-pwd"/></td>
       </tr>
       <tr>
         <td><label for="password"><span class="name">ESP32-CAM Password</span></label></td>
@@ -25,11 +29,13 @@
       </tr>
       <tr>
         <td></td>
-        <td><a onclick="uploadFirmware()">Upload</a></td>
+        <td><a onclick="setupWifi()">Connect</a></td>
       </tr>
     </table>
-    <p id="ota-msg"></p>
+    <p id="wifi-msg"></p>
 
   </body>
 
 </html>
+
+      

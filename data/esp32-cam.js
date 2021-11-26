@@ -30,10 +30,10 @@ function createHTML(parent, ele, attrs)
 }
 function createText(parent, text)
 {
-    let ele = document.createTextNode(text) ;
+    let ele = document.createTextNode(text)
     if (parent)
-        parent.appendChild(ele) ;
-    return ele ;
+        parent.appendChild(ele)
+    return ele
 }
 
 function buildMenu()
@@ -56,7 +56,7 @@ function buildMenu()
           case 'str':
             let tdText   = createHTML(tr, 'td', { 'colspan': 99 })
             createText(tdText, v.value)
-            break ;
+            break
 
           case 'int':
             let tdMin   = createHTML(tr, 'td')
@@ -64,11 +64,11 @@ function buildMenu()
             
             let tdInput = createHTML(tr, 'td')
             let input = createHTML(tdInput, 'input', { 'type': 'range', 'min': v.min, 'max': v.max, 'value': v.value })
-            input.onchange = function() { menuChange('camera.' + k, input.value) ; }
+            input.onchange = function() { menuChange('camera.' + k, input.value) }
             
             let tdMax   = createHTML(tr, 'td')        
             createText(tdMax, v.max)
-            break ;
+            break
         }
     }
 }
@@ -112,7 +112,8 @@ function main(initMenu)
                   settings = json
                   let name = settings.global.name
                   if (name)
-                      for (let e of document.getElementsByClassName("name")) { e.innerText = name.value }
+                      for (let e of document.getElementsByClassName("name"))
+                          e.innerText = e.innerText.replace('ESP32-CAM', name.value)
                   if (initMenu)
                       buildMenu()
               })
@@ -124,23 +125,51 @@ function main(initMenu)
 
 function uploadFirmware(inputFile)
 {
-    const msg = document.getElementById('msg');
-    let formData = new FormData() ;
+    const msg = document.getElementById('ota-msg')
+    const firmware = document.getElementById('firmware')
+    const password = document.getElementById('esp-pwd')
+    let formData = new FormData()
 
-    msg.textContent = 'Uploading, please wait...';
+    msg.textContent = 'Uploading, please wait...'
 
-    formData.append("firmware.bin", inputFile.files[0]) ;
-    fetch('/ota', { method: "POST", body: formData })
+    formData.set('esp-pwd', password.value)
+    formData.set('firmware', firmware.files[0])
+    fetch('/ota', { method: 'POST', body: formData })
         .then(response => response.text()) // should check if response is text/plain
         .then(text => 
               {
-                  msg.textContent = text;
-                  if (text.includes("booting"))
+                  msg.textContent = text
+                  if (text.includes('booting'))
                   {
                       new Promise(resolve => setTimeout(resolve, 6000))
                           .then(() => { window.location.href = '/esp32-cam.html' })
                   }
-              });
+              })
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Wifi (esp32-cam-wifi.html)
+////////////////////////////////////////////////////////////////////////////////
+
+function setupWifi(inputFile)
+{
+    const msg = document.getElementById('wifi-msg')
+    const wifiSsid = document.getElementById('wifi-ssid')
+    const wifiPwd = document.getElementById('wifi-pwd')
+    const espPwd = document.getElementById('esp-pwd')
+    let formData = new FormData()
+
+    msg.textContent = 'Uploading, please wait...'
+
+    formData.set('esp-pwd', espPwd.value)
+    formData.set('wifi-ssid', wifiSsid.value)
+    formData.set('wifi-pwd', wifiPwd.value)
+    fetch('/wifi', { method: 'POST', body: formData })
+        .then(response => response.text()) // should check if response is text/plain
+        .then(text => 
+              {
+                  msg.textContent = text
+              })
 }
 
 

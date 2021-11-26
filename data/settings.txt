@@ -1,5 +1,5 @@
-global.name=❤ ESP32 CAM ❤
+global.name=ESP32 CAM
 camera.quality=10
-camera.brightness=-1
-camera.contrast=1
-test.test=TesT
+camera.brightness=0
+camera.contrast=0
+

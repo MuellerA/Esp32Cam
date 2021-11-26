@@ -71,30 +71,48 @@ private:
 class Settings
 {
 public:
-  Settings() ;
-  ~Settings() ;
+  Settings(const std::string &fileName, const std::vector<Setting*> &settings) ;
+  virtual ~Settings() ;
   
-  bool init() ;
-  bool terminate() ;
+  virtual bool init() ;
+  virtual bool terminate() ;
 
   bool load() ;
   bool save() const ;
   
   std::string json() const ;
   bool set(const std::string &key, const std::string &val) ;
+  bool get(const std::string &key, std::string &val) ;
+
+protected:
+  const std::string _fileName ;
+  
+  std::vector<Setting*> _settings ;
+  std::map<std::string, Setting*> _settingByName ;
+} ;
+
+class PublicSettings : public Settings
+{
+public:
+  PublicSettings() ;
+  
+  virtual bool init() ;
   
   const sensor_t& sensor() const ;
   sensor_t& sensor() ;
 
 private:
-  std::string _name ;
   sensor_t    *_sensor{nullptr} ;
-
-  std::vector<Setting*> _settings ;
-  std::map<std::string, Setting*> _settingByName ;
 } ;
 
-extern Settings settings ;
+class PrivateSettings : public Settings
+{
+public:
+  PrivateSettings() ;
+} ;
+
+extern PublicSettings  publicSettings ;
+extern PrivateSettings privateSettings ;
 
 ////////////////////////////////////////////////////////////////////////////////
 // EOF

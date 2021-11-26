@@ -182,6 +182,7 @@ void setup()
 {
   WiFiManager wm;
 
+  
   WiFi.mode(WIFI_STA);
   Serial.begin(115200) ;
   Serial.println("Setup") ;
@@ -194,7 +195,9 @@ void setup()
 
   if (!spifs.init() ||
       !camera.init() ||
-      !settings.init() ||
+      !privateSettings.init() ||
+      !publicSettings.init() ||
+      !crypt.init() ||
       !httpd.start())
     ESP.restart() ;
 
@@ -206,9 +209,13 @@ void setup()
 void terminate()
 {
   httpd.stop() ;
-  settings.terminate() ;
+  crypt.terminate() ;
+  publicSettings.terminate() ;
+  privateSettings.terminate() ;
   camera.terminate() ;
   spifs.terminate() ;
+
+  ESP.restart() ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -218,7 +225,6 @@ void loop()
   if (terminator())
   {
     terminate() ;
-    ESP.restart() ;
   }
 }
 

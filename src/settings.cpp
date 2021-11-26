@@ -6,7 +6,8 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-Settings settings ;
+PrivateSettings privateSettings ;
+PublicSettings  publicSettings ;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -117,41 +118,12 @@ std::string SettingInt::json()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Settings
+////////////////////////////////////////////////////////////////////////////////
 
-Settings::Settings()
+Settings::Settings(const std::string &fileName, const std::vector<Setting*> &settings) :
+  _fileName(fileName), _settings(settings)
 {
-  _settings = std::vector<Setting*>
-    {
-     new SettingStr("global", "name",
-                    [](Settings &settings) { return "ESP32 CAM" ; },
-                    nullptr),
-     new SettingInt("camera", "brightness",
-                    [](Settings &settings) { return settings.sensor().status.brightness ; },
-                    [](Settings &settings, const int16_t value)
-                    {
-                      sensor_t sensor = settings.sensor() ;
-                      sensor.set_brightness(&sensor, value) ;
-                    },
-                    -2, 2 ),
-     new SettingInt("camera", "contrast",
-                    [](Settings &settings) { return settings.sensor().status.contrast ; },
-                    [](Settings &settings, const int16_t value)
-                    {
-                      sensor_t sensor = settings.sensor() ;
-                      sensor.set_contrast(&sensor, value) ;
-                    },
-                    -2, 2 ),
-     new SettingInt("camera", "quality",
-                    [](Settings &settings) { return settings.sensor().status.quality ; },
-                    [](Settings &settings, const int16_t value)
-                    {
-                      sensor_t sensor = settings.sensor() ;
-                      sensor.set_quality(&sensor, value) ;
-                    },
-                    0, 63 ),
-
-    } ;
-
   for (Setting *setting : _settings)
   {
     _settingByName[setting->category() + "." + setting->name()] = setting ;
@@ -166,13 +138,6 @@ Settings::~Settings()
 
 bool Settings::init()
 {
-  _sensor = esp_camera_sensor_get() ;
-  if (!_sensor)
-  {
-    Serial.println("esp_camera_sensor_get() failed") ;
-    return false ;
-  }
-
   for (Setting *setting : _settings)
     setting->init(*this) ;
   
@@ -189,7 +154,7 @@ bool Settings::terminate()
 bool Settings::load()
 {
   std::string text ;
-  if (!spifs.read("settings.txt", text))
+  if (!spifs.read(_fileName, text))
     return false ;
 
   const char *k{text.c_str()} ;
@@ -204,7 +169,7 @@ bool Settings::load()
     if (!e)
       e = text.c_str() + text.size() ;
     std::string key{k, (size_t)(v-k)} ;
-    Serial.println(("settings: " + key + std::string(v+1, e-(v+1))).c_str()) ;
+    Serial.println((_fileName + " " + key + " " + std::string(v+1, e-(v+1))).c_str()) ;
     auto iSetting = _settingByName.find(key) ;
     if (iSetting != _settingByName.end())
       iSetting->second->set(*this, std::string(v+1, e-(v+1))) ;
@@ -224,7 +189,7 @@ bool Settings::save() const
     text += setting->category() + "." + setting->name() + "=" + setting->value() + "\n" ;
   }
   
-  return spifs.write("settings.txt", text) ;
+  return spifs.write(_fileName, text) ;
 }
 
 std::string Settings::json() const
@@ -270,10 +235,94 @@ bool Settings::set(const std::string &key, const std::string &val)
   return iSetting->second->set(*this, val) ;
 }
 
+bool Settings::get(const std::string &key, std::string &val)
+{
+  auto iSetting = _settingByName.find(key) ;
+  if (iSetting == _settingByName.end())
+    return false ;
 
-const sensor_t& Settings::sensor() const { return *_sensor ; }
-sensor_t& Settings::sensor() { return *_sensor ; }
- 
+  val = iSetting->second->value() ;
+  return true ;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// PublicSettings
+////////////////////////////////////////////////////////////////////////////////
+
+PublicSettings::PublicSettings() :
+  Settings("settings.txt",
+           std::vector<Setting*>
+           {
+             new SettingStr("global", "name",
+                            [](Settings &settings) { return "ESP32 CAM" ; },
+                            nullptr),
+               new SettingInt("camera", "brightness",
+                              [](Settings &settings) { return static_cast<PublicSettings&>(settings).sensor().status.brightness ; },
+                              [](Settings &settings, const int16_t value)
+                              {
+                                sensor_t sensor = static_cast<PublicSettings&>(settings).sensor() ;
+                                sensor.set_brightness(&sensor, value) ;
+                              },
+                              -2, 2 ),
+               new SettingInt("camera", "contrast",
+                              [](Settings &settings) { return static_cast<PublicSettings&>(settings).sensor().status.contrast ; },
+                              [](Settings &settings, const int16_t value)
+                              {
+                                sensor_t sensor = static_cast<PublicSettings&>(settings).sensor() ;
+                                sensor.set_contrast(&sensor, value) ;
+                              },
+                              -2, 2 ),
+               new SettingInt("camera", "quality",
+                              [](Settings &settings) { return static_cast<PublicSettings&>(settings).sensor().status.quality ; },
+                              [](Settings &settings, const int16_t value)
+                              {
+                                sensor_t sensor = static_cast<PublicSettings&>(settings).sensor() ;
+                                sensor.set_quality(&sensor, value) ;
+                              },
+                              0, 63 ),
+               })
+{
+}
+
+bool PublicSettings::init()
+{
+  _sensor = esp_camera_sensor_get() ;
+  if (!_sensor)
+  {
+    Serial.println("esp_camera_sensor_get() failed") ;
+    return false ;
+  }
+
+  return Settings::init() ;
+}
+
+const sensor_t& PublicSettings::sensor() const { return *_sensor ; }
+sensor_t& PublicSettings::sensor() { return *_sensor ; }
+
+////////////////////////////////////////////////////////////////////////////////
+// PrivateSettings
+////////////////////////////////////////////////////////////////////////////////
+
+PrivateSettings::PrivateSettings() :
+  Settings("secret.txt",
+           std::vector<Setting*>
+           {
+             new SettingStr("esp", "salt",
+                            [](Settings &settings) { return "ESP32 CAM" ; },
+                            [](Settings &settings, const std::string &v) { settings.save() ; }),
+               new SettingStr("esp", "pwdHash",
+                              nullptr,
+                              [](Settings &settings, const std::string &v) { settings.save() ; }),
+               new SettingStr("wifi", "ssid",
+                              nullptr,
+                              [](Settings &settings, const std::string &v) { settings.save() ; }),
+               new SettingStr("wifi", "pwd",
+                              nullptr,
+                              [](Settings &settings, const std::string &v) { settings.save() ; })
+               })
+{
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // EOF
 ////////////////////////////////////////////////////////////////////////////////

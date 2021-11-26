@@ -18,16 +18,17 @@ esp_err_t cmdInfo(httpd_req_t *req)
 
 const HTTPD::FileInfo HTTPD::_fileInfos[]
   {
-   { "/favicon.ico"       , "image/x-icon"             , "camera-40.ico"      },
-   { "/camera.svg"        , "image/svg+xml"            , "camera.svg"         },
-   { "/camera-16.png"     , "image/png"                , "camera-16.png"      },
-   { "/camera-32.png"     , "image/png"                , "camera-32.png"      },
-   { "/camera-64.png"     , "image/png"                , "camera-64.png"      },
-   { "/esp32-cam.html"    , "text/html"                , "esp32-cam.html"     },
-   { "/esp32-cam-ota.html", "text/html"                , "esp32-cam-ota.html" },
-   { "/esp32-cam.css"     , "text/css"                 , "esp32-cam.css"      },
-   { "/esp32-cam.js"      , "text/javascript"          , "esp32-cam.js"       },
-   { "/settings.txt"      , "text/plain;charset=utf-8" , "settings.txt"       },
+   { "/favicon.ico"        , "image/x-icon"             , "camera-40.ico"       },
+   { "/camera.svg"         , "image/svg+xml"            , "camera.svg"          },
+   { "/camera-16.png"      , "image/png"                , "camera-16.png"       },
+   { "/camera-32.png"      , "image/png"                , "camera-32.png"       },
+   { "/camera-64.png"      , "image/png"                , "camera-64.png"       },
+   { "/esp32-cam.html"     , "text/html"                , "esp32-cam.html"      },
+   { "/esp32-cam-ota.html" , "text/html"                , "esp32-cam-ota.html"  },
+   { "/esp32-cam-wifi.html", "text/html"                , "esp32-cam-wifi.html" },
+   { "/esp32-cam.css"      , "text/css"                 , "esp32-cam.css"       },
+   { "/esp32-cam.js"       , "text/javascript"          , "esp32-cam.js"        },
+   { "/settings.txt"       , "text/plain;charset=utf-8" , "settings.txt"        },
   } ;
 
 static const httpd_uri_t uris[] =
@@ -113,7 +114,7 @@ static const httpd_uri_t uris[] =
     [](httpd_req_t *req)
     {
       httpd_resp_set_type(req, "application/json") ;
-      std::string json = settings.json() ;
+      std::string json = publicSettings.json() ;
       return httpd_resp_send(req, json.data(), json.size()) ;
     }
    },
@@ -133,7 +134,7 @@ static const httpd_uri_t uris[] =
 
       if (!strcmp(cmd, "save"  ))
       {
-        if (settings.save())
+        if (publicSettings.save())
           httpd_resp_send(req, nullptr, 0) ;
         else
           httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "save failed") ;
@@ -181,7 +182,7 @@ static const httpd_uri_t uris[] =
 
       Serial.println(("- " + key + " " + val).c_str()) ;
       
-      if (!settings.set(key, val))
+      if (!publicSettings.set(key, val))
       {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "invalid parameters") ;
         return ESP_OK ;
