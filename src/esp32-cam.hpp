@@ -3,7 +3,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <WiFi.h>
-#include <WiFiManager.h>
+
 #include <esp_https_server.h>
 #include <esp_camera.h>
 #include <esp_spiffs.h>
@@ -71,8 +71,11 @@ class HTTPD
   } ;
 
 public:
+  enum class Mode { none, login, full } ;
+  
   ~HTTPD() ;
   bool start() ;
+  bool mode(Mode) ;
   bool stop() ;
 
   static esp_err_t getFile(httpd_req_t *req) ;
@@ -80,31 +83,57 @@ public:
   
 private:
   httpd_handle_t    _httpd{nullptr} ;
+  Mode              _mode{Mode::none} ;
   Data              _cert ;
   Data              _key ;
-  static const FileInfo _fileInfos[] ;
+  static const FileInfo _staticUriAll[] ;
+  static const FileInfo _staticUriLogin[] ;
+  static const FileInfo _staticUriFull[] ;
+  static const httpd_uri_t _dynamicUriLogin[] ;
+  static const httpd_uri_t _dynamicUriFull[] ;
 } ;
 
 extern HTTPD httpd ;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-struct Part
-{
-  Part(const uint8_t *hb, const uint8_t *he, const uint8_t *bb, const uint8_t *be) ;
 
-  const uint8_t *_headBegin ;
-  const uint8_t *_headEnd ;
-  const uint8_t *_bodyBegin ;
-  const uint8_t *_bodyEnd ;
+class MultiPart
+{
+public:
+  struct Part
+  {
+    Part() ;
+    Part(const uint8_t *hb, const uint8_t *he, const uint8_t *bb, const uint8_t *be) ;
+
+    uint32_t headSize() const ;
+    uint32_t bodySize() const ;
+    
+    const uint8_t *_headBegin ;
+    const uint8_t *_headEnd ;
+    const uint8_t *_bodyBegin ;
+    const uint8_t *_bodyEnd ;
+  } ;
+
+public:
+  MultiPart(httpd_req_t *req) ;
+  ~MultiPart() ;
+  
+  bool parse() ;
+  bool get(const std::string &name, Part &part) ;
+  
+private:
+  using PartByName = std::map<std::string, Part> ;
+
+  bool parseBody(const uint8_t *boundary, size_t boundarySize, const uint8_t *data, size_t dataSize) ;
+  bool parseName(const uint8_t *head, size_t headSize, std::string &name) ;            
+  
+  httpd_req_t *_req ;
+  uint8_t     *_content ;
+  PartByName   _parts ;
 } ;
-using PartByName = std::map<std::string, Part> ;
 
 extern const uint8_t* memmem(const uint8_t *buff, size_t size, const uint8_t *pattern, size_t patternSize) ;
-extern bool parseMultiPart(const uint8_t *boundary, size_t boundarySize,
-                           const uint8_t *data, size_t dataSize,
-                           PartByName &parts) ;
-
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -140,6 +169,12 @@ extern Terminator terminator ;
 ////////////////////////////////////////////////////////////////////////////////
 
 extern esp_err_t ota(httpd_req_t *req) ;
+extern esp_err_t wifiSetup(httpd_req_t *req) ;
+
+extern void onWiFiStGotIp(WiFiEvent_t ev, WiFiEventInfo_t info) ;
+extern void onWifiStLostId(WiFiEvent_t ev, WiFiEventInfo_t info) ;
+extern void onWifiApConnect(WiFiEvent_t ev, WiFiEventInfo_t info) ;
+extern void onWifiApDisconnect(WiFiEvent_t ev, WiFiEventInfo_t info) ;
 
 ////////////////////////////////////////////////////////////////////////////////
 // EOF

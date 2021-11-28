@@ -50,9 +50,6 @@ bool Crypt::pwdCheck(const Data &pwd)
     pwdHash2 += (j < 10) ? (j + '0') : (j + 'a' - 10) ;
   }
 
-  Serial.println(pwdHash.c_str()) ;
-  Serial.println(pwdHash2.c_str()) ;
-  
   return pwdHash == pwdHash2 ;
 }
 

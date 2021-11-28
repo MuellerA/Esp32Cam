@@ -110,7 +110,7 @@ function main(initMenu)
         .then(json =>
               {
                   settings = json
-                  let name = settings.global.name
+                  let name = settings.esp.name
                   if (name)
                       for (let e of document.getElementsByClassName("name"))
                           e.innerText = e.innerText.replace('ESP32-CAM', name.value)

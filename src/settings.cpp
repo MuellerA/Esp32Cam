@@ -253,7 +253,7 @@ PublicSettings::PublicSettings() :
   Settings("settings.txt",
            std::vector<Setting*>
            {
-             new SettingStr("global", "name",
+             new SettingStr("esp", "name",
                             [](Settings &settings) { return "ESP32 CAM" ; },
                             nullptr),
                new SettingInt("camera", "brightness",
@@ -309,16 +309,22 @@ PrivateSettings::PrivateSettings() :
            {
              new SettingStr("esp", "salt",
                             [](Settings &settings) { return "ESP32 CAM" ; },
-                            [](Settings &settings, const std::string &v) { settings.save() ; }),
+                            nullptr),
                new SettingStr("esp", "pwdHash",
                               nullptr,
-                              [](Settings &settings, const std::string &v) { settings.save() ; }),
-               new SettingStr("wifi", "ssid",
+                              nullptr),
+               new SettingStr("wifi", "ap-ssid",
                               nullptr,
-                              [](Settings &settings, const std::string &v) { settings.save() ; }),
-               new SettingStr("wifi", "pwd",
+                              nullptr),
+               new SettingStr("wifi", "ap-country",
                               nullptr,
-                              [](Settings &settings, const std::string &v) { settings.save() ; })
+                              nullptr),
+               new SettingStr("wifi", "st-ssid",
+                              nullptr,
+                              nullptr),
+               new SettingStr("wifi", "st-pwd",
+                              nullptr,
+                              nullptr),
                })
 {
 }

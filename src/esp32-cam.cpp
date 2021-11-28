@@ -180,30 +180,39 @@ Terminator terminator ;
 
 void setup()
 {
-  WiFiManager wm;
-
-  
-  WiFi.mode(WIFI_STA);
   Serial.begin(115200) ;
   Serial.println("Setup") ;
-  
-  if (!wm.autoConnect("ESP32-CAM", "ESP32-CAM"))
-  {
-    Serial.println("WiFiManager::autoConnect() failed") ;
-    ESP.restart() ;
-  }
 
   if (!spifs.init() ||
       !camera.init() ||
       !privateSettings.init() ||
       !publicSettings.init() ||
-      !crypt.init() ||
-      !httpd.start())
+      !crypt.init())
     ESP.restart() ;
 
-  Serial.println("Setup complete") ;
-
   esp_ota_mark_app_valid_cancel_rollback() ;
+  
+  Serial.println("Setup complete") ;
+  
+  std::string apSsid, apCountry, stSsid, stPwd, espName ;
+  if (!privateSettings.get("wifi.ap-ssid", apSsid) ||
+      !privateSettings.get("wifi.ap-country", apCountry) ||
+      !privateSettings.get("wifi.st-ssid", stSsid) ||
+      !privateSettings.get("wifi.st-pwd", stPwd) ||
+      !publicSettings.get("esp.name", espName))
+    ESP.restart() ;
+
+  WiFi.mode(WIFI_MODE_APSTA) ;
+  WiFi.onEvent(onWiFiStGotIp, SYSTEM_EVENT_STA_GOT_IP) ;
+  WiFi.onEvent(onWifiStLostId, SYSTEM_EVENT_STA_LOST_IP) ;
+  WiFi.onEvent(onWifiApConnect, SYSTEM_EVENT_AP_STACONNECTED) ;
+  WiFi.onEvent(onWifiApDisconnect, SYSTEM_EVENT_AP_STADISCONNECTED) ;
+  WiFi.softAP(apSsid.c_str()) ;
+  if (stSsid.size())
+    WiFi.begin(stSsid.c_str(), stPwd.c_str()) ;
+
+  if (!httpd.start())
+    ESP.restart() ;
 }
 
 void terminate()

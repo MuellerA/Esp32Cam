@@ -16,22 +16,54 @@ esp_err_t cmdInfo(httpd_req_t *req)
   return ESP_OK ;
 }
 
-const HTTPD::FileInfo HTTPD::_fileInfos[]
+const HTTPD::FileInfo HTTPD::_staticUriAll[]
   {
    { "/favicon.ico"        , "image/x-icon"             , "camera-40.ico"       },
    { "/camera.svg"         , "image/svg+xml"            , "camera.svg"          },
    { "/camera-16.png"      , "image/png"                , "camera-16.png"       },
    { "/camera-32.png"      , "image/png"                , "camera-32.png"       },
    { "/camera-64.png"      , "image/png"                , "camera-64.png"       },
-   { "/esp32-cam.html"     , "text/html"                , "esp32-cam.html"      },
    { "/esp32-cam-ota.html" , "text/html"                , "esp32-cam-ota.html"  },
-   { "/esp32-cam-wifi.html", "text/html"                , "esp32-cam-wifi.html" },
    { "/esp32-cam.css"      , "text/css"                 , "esp32-cam.css"       },
    { "/esp32-cam.js"       , "text/javascript"          , "esp32-cam.js"        },
    { "/settings.txt"       , "text/plain;charset=utf-8" , "settings.txt"        },
   } ;
 
-static const httpd_uri_t uris[] =
+const HTTPD::FileInfo HTTPD::_staticUriLogin[]
+  {
+   { "/esp32-cam.html"     , "text/html"                , "esp32-cam-wifi.html" },
+  } ;
+
+const HTTPD::FileInfo HTTPD::_staticUriFull[]
+  {
+   { "/esp32-cam.html"     , "text/html"                , "esp32-cam.html"      },
+  } ;
+
+const httpd_uri_t HTTPD::_dynamicUriLogin[] =
+  {
+   {
+    "/",
+    HTTP_GET,
+    [](httpd_req_t *req){ return HTTPD::redirect(req, "/esp32-cam.html") ; }
+   },
+   {
+    "/index.html",
+    HTTP_GET,
+    [](httpd_req_t *req){ return HTTPD::redirect(req, "esp32-cam.html") ; }
+   },
+   {
+    "/ota",
+    HTTP_POST,
+    ota
+   },
+   {
+    "/wifi",
+    HTTP_POST,
+    wifiSetup
+   }
+} ;
+
+const httpd_uri_t HTTPD::_dynamicUriFull[] =
   {
    {
     "/",
@@ -196,7 +228,7 @@ static const httpd_uri_t uris[] =
     "/ota",
     HTTP_POST,
     ota
-   }
+   },
   } ;
 
 HTTPD::~HTTPD()
@@ -236,7 +268,7 @@ bool HTTPD::start()
     return false ;
   }
 
-  for (const FileInfo &fi : _fileInfos)
+  for (const FileInfo &fi : _staticUriAll)
   {
     httpd_uri_t uri ;
     uri.uri = fi._url ;
@@ -249,15 +281,119 @@ bool HTTPD::start()
       return false ;
     }
   }
-  
-  for (const auto &uri : uris)
-    if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
-    {
-      Serial.println("httpd_register_uri_handler() failed") ;
-      return false ;
-    }
+
+  if (!mode(Mode::login))
+    return false ;
 
   return true ;
+}
+
+bool HTTPD::mode(HTTPD::Mode mode)
+{
+  if (mode == _mode)
+    return true ;
+
+  bool result{true} ;
+  
+  // unregister
+  switch (_mode)
+  {
+  case Mode::none:
+    break ;
+    
+  case Mode::login:
+    for (const FileInfo &fi : _staticUriLogin)
+    {
+      if (httpd_unregister_uri_handler(_httpd, fi._url, HTTP_GET) != ESP_OK)
+      {
+        Serial.println("httpd_unregister_uri_handler() failed") ;
+        result = false ;
+      }
+    }
+
+    for (const auto &uri : _dynamicUriLogin)
+      if (httpd_unregister_uri_handler(_httpd, uri.uri, uri.method) != ESP_OK)
+      {
+        Serial.println("httpd_unregister_uri_handler() failed") ;
+        result = false ;
+      }
+
+    break ;
+  case Mode::full:
+    for (const FileInfo &fi : _staticUriFull)
+    {
+      if (httpd_unregister_uri_handler(_httpd, fi._url, HTTP_GET) != ESP_OK)
+      {
+        Serial.println("httpd_unregister_uri_handler() failed") ;
+        result = false ;
+      }
+    }
+ 
+    for (const auto &uri : _dynamicUriFull)
+      if (httpd_unregister_uri_handler(_httpd, uri.uri, uri.method) != ESP_OK)
+      {
+        Serial.println("httpd_unregister_uri_handler() failed") ;
+        result = false ;
+      }
+    break ;
+  }
+
+  _mode = mode ;
+
+  // register
+  switch (_mode)
+  {
+  case Mode::none:
+    break ;
+
+  case Mode::login:
+    for (const FileInfo &fi : _staticUriLogin)
+    {
+      httpd_uri_t uri ;
+      uri.uri = fi._url ;
+      uri.method = HTTP_GET ;
+      uri.handler = HTTPD::getFile ;
+      uri.user_ctx = (void*)&fi ;
+      if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
+      {
+        Serial.println("httpd_register_uri_handler() failed") ;
+        result = false ;
+      }
+    }
+
+    for (const auto &uri : _dynamicUriLogin)
+      if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
+      {
+        Serial.println("httpd_register_uri_handler() failed") ;
+        result = false ;
+      }
+    break ;
+
+  case Mode::full:
+    for (const FileInfo &fi : _staticUriFull)
+    {
+      httpd_uri_t uri ;
+      uri.uri = fi._url ;
+      uri.method = HTTP_GET ;
+      uri.handler = HTTPD::getFile ;
+      uri.user_ctx = (void*)&fi ;
+      if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
+      {
+        Serial.println("httpd_register_uri_handler() failed") ;
+        result = false ;
+      }
+    }
+  
+    for (const auto &uri : _dynamicUriFull)
+      if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
+      {
+        Serial.println("httpd_register_uri_handler() failed") ;
+        result = false ;
+      }
+    break ;
+  }
+
+  return result ;
 }
 
 bool HTTPD::stop()
@@ -295,7 +431,7 @@ esp_err_t HTTPD::getFile(httpd_req_t *req)
 esp_err_t HTTPD::redirect(httpd_req_t *req, const char *location)
 {
   std::string msg ;
-  msg += "HTTP/1.1 301 Moved Permanently\r\n" ;
+  msg += "HTTP/1.1 308 Permanent Redirect\r\n" ;
   msg += "Location: " ;
   msg += location ;
   msg += "\r\n" ;

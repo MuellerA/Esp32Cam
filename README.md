@@ -21,12 +21,13 @@ pio run -t upload
   * ECC: ```openssl req -x509 -subj "/CN=ESP32-CAM" -nodes -days 9999 -keyout data/key.pem -out data/cert.pem -newkey ec:<(openssl ecparam -name prime256v1)```
 
 * Modify data/settings.txt
-  * global.name: display name
+  * esp.name: display name
   * camera.*: camera settings
 * Modify data/secret.txt
   * esp.salt: random value (eg ```dd if=/dev/random bs=50 count=1 | base64```)
-  * esp.pwdHash: sha256 hash of concatination of salt and user password (```echo -n "saltpassword" | sha256sum```)
-  * wlan.*: wifi network settings
+  * esp.pwdHash: sha256 hash of concatination of salt and user password (```(echo -n ${esp_salt} ; echo -n 'mypassword') | sha256sum```)
+  * wlan.ap-*: settings for wifi soft access point
+  * wlan.st-*: settings for wifi station mode
   
 ```
 pio run -t uploadfs
@@ -34,13 +35,8 @@ pio run -t uploadfs
 
 ## TODO
 
-* password rename setting
-* wlan rename wifi
-* gitignore settings.txt secret.txt
-
 * more settings
 * https out of memory???
-* remove WiFiManager
 * remove Arduino?
 * record to sdcard
 * spiffs ota
