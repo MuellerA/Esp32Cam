@@ -204,7 +204,7 @@ void setup()
 
   WiFi.mode(WIFI_MODE_APSTA) ;
   WiFi.onEvent(onWiFiStGotIp, SYSTEM_EVENT_STA_GOT_IP) ;
-  WiFi.onEvent(onWifiStLostId, SYSTEM_EVENT_STA_LOST_IP) ;
+  WiFi.onEvent(onWifiStLostIp, SYSTEM_EVENT_STA_LOST_IP) ;
   WiFi.onEvent(onWifiApConnect, SYSTEM_EVENT_AP_STACONNECTED) ;
   WiFi.onEvent(onWifiApDisconnect, SYSTEM_EVENT_AP_STADISCONNECTED) ;
   WiFi.softAP(apSsid.c_str()) ;

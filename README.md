@@ -20,10 +20,10 @@ pio run -t upload
   * RSA: ```openssl req -x509 -subj "/CN=ESP32-CAM" -nodes -days 9999 -keyout data/key.pem -out data/cert.pem -newkey rsa:2048```
   * ECC: ```openssl req -x509 -subj "/CN=ESP32-CAM" -nodes -days 9999 -keyout data/key.pem -out data/cert.pem -newkey ec:<(openssl ecparam -name prime256v1)```
 
-* Modify data/settings.txt
+* Copy data/settings.template.txt to data/settings.txt and edit
   * esp.name: display name
   * camera.*: camera settings
-* Modify data/secret.txt
+* Copy data/secret.template.txt to data/secret.txt and edit
   * esp.salt: random value (eg ```dd if=/dev/random bs=50 count=1 | base64```)
   * esp.pwdHash: sha256 hash of concatination of salt and user password (```(echo -n ${esp_salt} ; echo -n 'mypassword') | sha256sum```)
   * wlan.ap-*: settings for wifi soft access point

@@ -13,11 +13,11 @@ void onWiFiStGotIp(WiFiEvent_t ev, WiFiEventInfo_t info)
   httpd.mode(HTTPD::Mode::full) ;
 }
 
-void onWifiStLostId(WiFiEvent_t ev, WiFiEventInfo_t info)
+void onWifiStLostIp(WiFiEvent_t ev, WiFiEventInfo_t info)
 {
   Serial.println("lost ip") ;
   WiFi.mode(WIFI_MODE_APSTA) ;
-  httpd.mode(HTTPD::Mode::login) ;
+  httpd.mode(HTTPD::Mode::wifi) ;
 }
 
 void onWifiApConnect(WiFiEvent_t ev, WiFiEventInfo_t info)

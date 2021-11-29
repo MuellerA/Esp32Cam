@@ -169,6 +169,11 @@ function setupWifi(inputFile)
         .then(text => 
               {
                   msg.textContent = text
+                  if (text.includes('Upload successful'))
+                  {
+                      new Promise(resolve => setTimeout(resolve, 3000))
+                          .then(() => { window.location.href = '/esp32-cam.html' })
+                  }
               })
 }
 

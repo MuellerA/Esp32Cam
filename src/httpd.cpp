@@ -29,7 +29,7 @@ const HTTPD::FileInfo HTTPD::_staticUriAll[]
    { "/settings.txt"       , "text/plain;charset=utf-8" , "settings.txt"        },
   } ;
 
-const HTTPD::FileInfo HTTPD::_staticUriLogin[]
+const HTTPD::FileInfo HTTPD::_staticUriWifi[]
   {
    { "/esp32-cam.html"     , "text/html"                , "esp32-cam-wifi.html" },
   } ;
@@ -37,14 +37,15 @@ const HTTPD::FileInfo HTTPD::_staticUriLogin[]
 const HTTPD::FileInfo HTTPD::_staticUriFull[]
   {
    { "/esp32-cam.html"     , "text/html"                , "esp32-cam.html"      },
+   { "/esp32-cam-wifi.html", "text/html"                , "esp32-cam-wifi.html" },
   } ;
 
-const httpd_uri_t HTTPD::_dynamicUriLogin[] =
+const httpd_uri_t HTTPD::_dynamicUriAll[] =
   {
    {
     "/",
     HTTP_GET,
-    [](httpd_req_t *req){ return HTTPD::redirect(req, "/esp32-cam.html") ; }
+    [](httpd_req_t *req){ return HTTPD::redirect(req, "esp32-cam.html") ; }
    },
    {
     "/index.html",
@@ -61,20 +62,10 @@ const httpd_uri_t HTTPD::_dynamicUriLogin[] =
     HTTP_POST,
     wifiSetup
    }
-} ;
+  } ;
 
 const httpd_uri_t HTTPD::_dynamicUriFull[] =
   {
-   {
-    "/",
-    HTTP_GET,
-    [](httpd_req_t *req){ return HTTPD::redirect(req, "/esp32-cam.html") ; }
-   },
-   {
-    "/index.html",
-    HTTP_GET,
-    [](httpd_req_t *req){ return HTTPD::redirect(req, "esp32-cam.html") ; }
-   },
    {
     "/capture.jpg",
     HTTP_GET,
@@ -224,11 +215,6 @@ const httpd_uri_t HTTPD::_dynamicUriFull[] =
       return ESP_OK ;      
     }
    },
-   {
-    "/ota",
-    HTTP_POST,
-    ota
-   },
   } ;
 
 HTTPD::~HTTPD()
@@ -282,7 +268,14 @@ bool HTTPD::start()
     }
   }
 
-  if (!mode(Mode::login))
+  for (const auto &uri : _dynamicUriAll)
+    if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
+    {
+      Serial.println("httpd_register_uri_handler() failed") ;
+      return false ;
+    }
+  
+  if (!mode(Mode::wifi))
     return false ;
 
   return true ;
@@ -301,8 +294,8 @@ bool HTTPD::mode(HTTPD::Mode mode)
   case Mode::none:
     break ;
     
-  case Mode::login:
-    for (const FileInfo &fi : _staticUriLogin)
+  case Mode::wifi:
+    for (const FileInfo &fi : _staticUriWifi)
     {
       if (httpd_unregister_uri_handler(_httpd, fi._url, HTTP_GET) != ESP_OK)
       {
@@ -310,13 +303,6 @@ bool HTTPD::mode(HTTPD::Mode mode)
         result = false ;
       }
     }
-
-    for (const auto &uri : _dynamicUriLogin)
-      if (httpd_unregister_uri_handler(_httpd, uri.uri, uri.method) != ESP_OK)
-      {
-        Serial.println("httpd_unregister_uri_handler() failed") ;
-        result = false ;
-      }
 
     break ;
   case Mode::full:
@@ -346,8 +332,8 @@ bool HTTPD::mode(HTTPD::Mode mode)
   case Mode::none:
     break ;
 
-  case Mode::login:
-    for (const FileInfo &fi : _staticUriLogin)
+  case Mode::wifi:
+    for (const FileInfo &fi : _staticUriWifi)
     {
       httpd_uri_t uri ;
       uri.uri = fi._url ;
@@ -361,12 +347,6 @@ bool HTTPD::mode(HTTPD::Mode mode)
       }
     }
 
-    for (const auto &uri : _dynamicUriLogin)
-      if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
-      {
-        Serial.println("httpd_register_uri_handler() failed") ;
-        result = false ;
-      }
     break ;
 
   case Mode::full:

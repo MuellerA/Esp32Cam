@@ -71,7 +71,7 @@ class HTTPD
   } ;
 
 public:
-  enum class Mode { none, login, full } ;
+  enum class Mode { none, wifi, full } ;
   
   ~HTTPD() ;
   bool start() ;
@@ -87,9 +87,9 @@ private:
   Data              _cert ;
   Data              _key ;
   static const FileInfo _staticUriAll[] ;
-  static const FileInfo _staticUriLogin[] ;
+  static const FileInfo _staticUriWifi[] ;
   static const FileInfo _staticUriFull[] ;
-  static const httpd_uri_t _dynamicUriLogin[] ;
+  static const httpd_uri_t _dynamicUriAll[] ;
   static const httpd_uri_t _dynamicUriFull[] ;
 } ;
 
@@ -172,7 +172,7 @@ extern esp_err_t ota(httpd_req_t *req) ;
 extern esp_err_t wifiSetup(httpd_req_t *req) ;
 
 extern void onWiFiStGotIp(WiFiEvent_t ev, WiFiEventInfo_t info) ;
-extern void onWifiStLostId(WiFiEvent_t ev, WiFiEventInfo_t info) ;
+extern void onWifiStLostIp(WiFiEvent_t ev, WiFiEventInfo_t info) ;
 extern void onWifiApConnect(WiFiEvent_t ev, WiFiEventInfo_t info) ;
 extern void onWifiApDisconnect(WiFiEvent_t ev, WiFiEventInfo_t info) ;
 
