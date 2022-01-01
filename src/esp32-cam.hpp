@@ -191,6 +191,7 @@ bool to_i(const std::string &s, T &i) ;
 std::string jsonStr(const std::string &key, const std::string &val) ;
 std::string jsonInt(const std::string &key, const std::string &val) ;
 std::string jsonInt(const std::string &key, int32_t val) ;
+std::string jsonArr(const std::string &key, const std::vector<std::string> &arr) ;
 
 ////////////////////////////////////////////////////////////////////////////////
 

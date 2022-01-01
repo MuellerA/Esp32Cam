@@ -23,8 +23,8 @@ std::string infoJson()
   //json += jsonInt("total internal heap", heap_caps_get_total_size(MALLOC_CAP_INTERNAL)) + ", " ;
   json += jsonInt("free internal heap", heap_caps_get_free_size(MALLOC_CAP_INTERNAL)) + ", " ;
 
-  //json += jsonInt("total spi heap", heap_caps_get_total_size(MALLOC_CAP_SPIRAM)) + ", " ;
-  json += jsonInt("free spi heap", heap_caps_get_free_size(MALLOC_CAP_SPIRAM)) + ", " ;
+  //json += jsonInt("total externalheap", heap_caps_get_total_size(MALLOC_CAP_SPIRAM)) + ", " ;
+  json += jsonInt("free external heap", heap_caps_get_free_size(MALLOC_CAP_SPIRAM)) + ", " ;
 
   {
     size_t total, used ;

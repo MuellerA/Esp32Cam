@@ -67,6 +67,24 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 
+class SettingEnum : public Setting
+{
+public:
+  using IniFn = std::function<std::string(Settings &settings, const std::vector<std::string> &enums)> ;
+  using SetFn = std::function<void(Settings &settings, const std::vector<std::string> &enums, const std::string &value)> ;
+  
+  SettingEnum(const std::string &category, const std::string &name, IniFn iniFn, SetFn setFn, const std::vector<std::string>& enums) ;
+  virtual void init(Settings &settings) ;
+  virtual bool set(Settings &settings, const std::string &value) ;
+  virtual std::string json() ;
+private:
+  IniFn _iniFn ;
+  SetFn _setFn ;
+  std::vector<std::string> _enum ;
+} ;
+
+////////////////////////////////////////////////////////////////////////////////
+
 class Settings
 {
 public:

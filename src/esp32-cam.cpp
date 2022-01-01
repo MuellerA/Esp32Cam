@@ -129,6 +129,22 @@ std::string jsonInt(const std::string &key, int32_t val)
   return jsonInt(key, to_s(val)) ;
 }
 
+std::string jsonArr(const std::string &key, const std::vector<std::string> &arr)
+{
+  std::string json = "\"" + key + "\": [ " ;
+  bool first{true} ;
+  for (const std::string &ele : arr)
+  {
+    if (first)
+      first = false ;
+    else
+      json += ", " ;
+    json += "\"" + ele + "\"" ;
+  }
+  json += " ]" ;
+  return json ;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 std::string SpiFs::_root{"/spiffs/"} ;

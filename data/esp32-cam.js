@@ -69,6 +69,20 @@ function buildMenu()
             let tdMax   = createHTML(tr, 'td')        
             createText(tdMax, v.max)
             break
+
+          case 'enum':
+            let tdSelect   = createHTML(tr, 'td', { 'colspan': 99 })
+            let select = createHTML(tdSelect, 'select')
+            select.onchange = function() { menuChange('camera.' + k, select.value) }
+            const enums = v['enum']
+            for (let i = 0 ; i < enums.length ; ++i)
+            {
+                let option = document.createElement('option')
+                option.text = enums[i]
+                select.add(option)
+            }
+            select.value = v.value
+            break
         }
     }
 }
