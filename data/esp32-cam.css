@@ -80,6 +80,16 @@ a:hover
     z-index: 1;
 }
 
+.info
+{
+    border-width: 1px;
+    border-color: #883515;
+    border-style: solid;
+    padding: 1ex;
+    border-spacing: 0;
+    border-collapse:collapse;
+}
+
 .name
 {
     /* marker for js getElementsByClassName to set name */

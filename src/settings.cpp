@@ -46,47 +46,16 @@ bool SettingStr::set(Settings &settings, const std::string &value)
 
 std::string SettingStr::json()
 {
-  return "\"type\": \"str\", \"value\" : \"" + _value + "\"" ;
+  return
+    jsonStr("type" , "str") + ", " +
+    jsonStr("value", _value) ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-std::string SettingInt::to_s(int16_t i)
+bool SettingInt::inRange(int16_t &i) const
 {
-  char buff[8] ;
-  snprintf(buff, sizeof(buff), "%d", i) ;
-  return buff ;  
-}
-
-bool SettingInt::to_i(const std::string &str, int16_t &i) const
-{
-  if (str.size() == 0)
-    return false ;
-  size_t iStr{0} ;
-  size_t eStr{str.size()} ;
-  bool neg{false} ;
-  if ((str[0] == '-') || (str[0] == '+'))
-  {
-    iStr = 1 ;
-    neg = str[0] == '-' ;
-  }
-  if (eStr > (4 + iStr))
-    return false ;
-
-  i = 0 ;
-  while (iStr < eStr)
-  {
-    char ch = str[iStr++] ;
-    if ((ch < '0') || ('9' < ch))
-      return false ;
-    i = i*10 + ch - '0' ;
-  }
-  if (neg)
-    i = -i ;
-  if ((i < _min) || (_max < i))
-    return false ;
-  
-  return true ;
+  return (_min <= i) && (i <= _max) ;
 }
 
 SettingInt::SettingInt(const std::string &category, const std::string &name, IniFn iniFn, SetFn setFn, int16_t min, int16_t max) :
@@ -103,7 +72,7 @@ void SettingInt::init(Settings &settings)
 bool SettingInt::set(Settings &settings, const std::string &value)
 {
   int16_t v ;
-  if (!to_i(value, v))
+  if (!to_i(value, v) || !inRange(v))
     return false ;
 
   _value = value ;
@@ -114,7 +83,11 @@ bool SettingInt::set(Settings &settings, const std::string &value)
 
 std::string SettingInt::json()
 {
-  return "\"type\": \"int\", \"min\": " + to_s(_min) + ", \"max\" :" + to_s(_max) + ", \"value\": " + _value ;
+  return
+    jsonStr("type" , "int") + ", " +
+    jsonInt("min"  , _min ) + ", " +
+    jsonInt("max"  , _max ) + ", " +
+    jsonInt("value", _value) ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -11,6 +11,126 @@ Camera camera ;
 
 ////////////////////////////////////////////////////////////////////////////////
 
+template<class T>
+std::string to_s(T val)
+{
+  if (!val)
+    return "0" ;
+  
+  bool neg = val < 0 ;
+  if (neg)
+    val = - val ;
+  
+  static uint8_t digits[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' } ;
+  char buff[20] ;
+
+  size_t i = sizeof(buff) ;
+  while (val)
+  {
+    buff[--i] = digits[val % 10] ;
+    val = val / 10 ;
+  }
+
+  if (neg)
+    buff[--i] = '-' ;
+
+  return std::string(buff+i, sizeof(buff)-i) ;
+}
+
+// explicit template instantiation
+template std::string to_s<uint8_t>(uint8_t) ;
+template std::string to_s<int16_t>(int16_t) ;
+template std::string to_s<int32_t>(int32_t) ;
+
+template<class T>
+bool to_i(const std::string &str, T &val)
+{
+  if (str.size() == 0)
+    return false ;
+  size_t iStr{0} ;
+  size_t eStr{str.size()} ;
+  bool neg{false} ;
+  if ((str[0] == '-') || (str[0] == '+'))
+  {
+    iStr = 1 ;
+    neg = str[0] == '-' ;
+  }
+  if (eStr > (4 + iStr))
+    return false ;
+
+  val = 0 ;
+  while (iStr < eStr)
+  {
+    char ch = str[iStr++] ;
+    if ((ch < '0') || ('9' < ch))
+      return false ;
+    val = val*10 + ch - '0' ;
+  }
+  if (neg)
+    val = -val ;
+
+  return true ;
+}
+
+// explicit template instantiation
+template bool to_i<uint8_t>(const std::string&, uint8_t&) ;
+template bool to_i<int16_t>(const std::string&, int16_t&) ;
+
+////////////////////////////////////////////////////////////////////////////////
+
+std::string mac_to_s(uint8_t *mac)
+{
+  std::string str ;
+  char buff[8] ;
+  bool first{true} ;
+  for (size_t i = 0 ; i < 6 ; ++i)
+  {
+    if (first)
+      first = false ;
+    else
+      str += ":" ;
+    sprintf(buff, "%02X", mac[i]) ;
+    str += buff ;
+  }
+  return str ;
+}
+
+std::string ip_to_s(uint8_t *ip)
+{
+  std::string str ;
+  char buff[8] ;
+  bool first{true} ;
+  for (size_t i = 0 ; i < 4 ; ++i)
+  {
+    if (first)
+      first = false ;
+    else
+      str += "." ;
+    sprintf(buff, "%u", ip[i]) ;
+    str += buff ;
+  }
+  return str ;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+std::string jsonStr(const std::string &key, const std::string &val)
+{
+  return "\"" + key + "\": \"" + val + "\"" ;
+}
+
+std::string jsonInt(const std::string &key, const std::string &val)
+{
+  return "\"" + key + "\": " + val ;
+}
+
+std::string jsonInt(const std::string &key, int32_t val)
+{
+  return jsonInt(key, to_s(val)) ;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 std::string SpiFs::_root{"/spiffs/"} ;
 
 SpiFs::SpiFs() : _conf{ .base_path = "/spiffs",
@@ -93,6 +213,11 @@ bool SpiFs::write(const std::string &name, const std::string &str)
 
   fclose(file) ;
   return res ;
+}
+
+bool SpiFs::df(size_t &total, size_t &used)
+{
+  return esp_spiffs_info(_conf.partition_label, &total, &used) == ESP_OK ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -202,6 +327,7 @@ void setup()
       !publicSettings.get("esp.name", espName))
     ESP.restart() ;
 
+  esp_wifi_set_storage(WIFI_STORAGE_RAM) ;
   WiFi.mode(WIFI_MODE_APSTA) ;
   WiFi.onEvent(onWiFiStGotIp, SYSTEM_EVENT_STA_GOT_IP) ;
   WiFi.onEvent(onWifiStLostIp, SYSTEM_EVENT_STA_LOST_IP) ;

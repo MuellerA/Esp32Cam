@@ -11,6 +11,10 @@ void onWiFiStGotIp(WiFiEvent_t ev, WiFiEventInfo_t info)
   Serial.println("got ip") ;
   WiFi.mode(WIFI_MODE_STA) ;
   httpd.mode(HTTPD::Mode::full) ;
+
+  tcpip_adapter_ip_info_t ipInfo;
+  tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
+  Serial.println(ip_to_s((uint8_t*)&ipInfo.ip.addr).c_str()) ;
 }
 
 void onWifiStLostIp(WiFiEvent_t ev, WiFiEventInfo_t info)

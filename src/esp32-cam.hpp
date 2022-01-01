@@ -8,6 +8,8 @@
 #include <esp_camera.h>
 #include <esp_spiffs.h>
 #include <esp_ota_ops.h>
+#include <esp_heap_caps.h>
+#include <esp_wifi.h>
 #include <mbedtls/md.h>
 
 #include <string>
@@ -34,6 +36,8 @@ public:
 
   bool read(const std::string &name, std::string &str) ;
   bool write(const std::string &name, const std::string &str) ;
+
+  bool df(size_t &total, size_t &used) ;
   
 private:
   static std::string    _root ;
@@ -175,6 +179,23 @@ extern void onWiFiStGotIp(WiFiEvent_t ev, WiFiEventInfo_t info) ;
 extern void onWifiStLostIp(WiFiEvent_t ev, WiFiEventInfo_t info) ;
 extern void onWifiApConnect(WiFiEvent_t ev, WiFiEventInfo_t info) ;
 extern void onWifiApDisconnect(WiFiEvent_t ev, WiFiEventInfo_t info) ;
+
+////////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+std::string to_s(T i) ;
+
+template<class T>
+bool to_i(const std::string &s, T &i) ;
+
+std::string jsonStr(const std::string &key, const std::string &val) ;
+std::string jsonInt(const std::string &key, const std::string &val) ;
+std::string jsonInt(const std::string &key, int32_t val) ;
+
+////////////////////////////////////////////////////////////////////////////////
+
+std::string mac_to_s(uint8_t *mac) ;
+std::string ip_to_s(uint8_t *ip) ;
 
 ////////////////////////////////////////////////////////////////////////////////
 // EOF

@@ -52,14 +52,13 @@ public:
   using IniFn = std::function<int16_t(Settings &settings)> ;
   using SetFn = std::function<void(Settings &settings, const int16_t value)> ;
 
-  static std::string to_s(int16_t i) ;
-  bool to_i(const std::string &s, int16_t &i) const ;
-  
   SettingInt(const std::string &category, const std::string &name, IniFn iniFn, SetFn setFn, int16_t min, int16_t max) ;
   virtual void init(Settings &settings) ;
   virtual bool set(Settings &settings, const std::string &value) ;
   virtual std::string json() ;
 private:
+  bool inRange(int16_t &i) const ;
+  
   IniFn _iniFn ;
   SetFn _setFn ;
   int16_t _min ;

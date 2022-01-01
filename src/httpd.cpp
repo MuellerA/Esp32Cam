@@ -10,10 +10,70 @@ HTTPD  httpd ;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-esp_err_t cmdInfo(httpd_req_t *req)
+std::string infoJson()
 {
-  // todo
-  return ESP_OK ;
+  std::string json ;
+  std::string str ;
+
+  json += "{ " ;
+  
+  publicSettings.get("esp.name", str) ;
+  json += jsonStr("name", str) + ", " ;
+
+  //json += jsonInt("total internal heap", heap_caps_get_total_size(MALLOC_CAP_INTERNAL)) + ", " ;
+  json += jsonInt("free internal heap", heap_caps_get_free_size(MALLOC_CAP_INTERNAL)) + ", " ;
+
+  //json += jsonInt("total spi heap", heap_caps_get_total_size(MALLOC_CAP_SPIRAM)) + ", " ;
+  json += jsonInt("free spi heap", heap_caps_get_free_size(MALLOC_CAP_SPIRAM)) + ", " ;
+
+  {
+    size_t total, used ;
+    if (spifs.df(total, used))
+    {
+      json += jsonInt("total spifs", (uint32_t)total) + ", " ;
+      json += jsonInt("free spifs", (uint32_t)(total - used)) + ", " ;
+    }
+    else
+    {
+      json += jsonStr("spifs", "n/a") + ", " ;
+    }
+  }
+  
+  {
+    uint8_t mac[6] ;
+    if (esp_wifi_get_mac(ESP_IF_WIFI_AP, mac) == ESP_OK)
+    {
+      json += jsonStr("ap mac", mac_to_s(mac)) + ", " ;
+      tcpip_adapter_ip_info_t ipInfo;
+      tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_AP, &ipInfo);
+      json += jsonStr("ap ip", ip_to_s((uint8_t*)&ipInfo.ip.addr)) + ", " ;
+    }
+    else
+      json += jsonStr("ap", "n/a") + ", " ;
+  }
+
+  {
+    uint8_t mac[6] ;
+    if (esp_wifi_get_mac(ESP_IF_WIFI_STA, mac) == ESP_OK)
+    {
+      json += jsonStr("sta mac", mac_to_s(mac)) + ", " ;
+      tcpip_adapter_ip_info_t ipInfo;
+      tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
+      json += jsonStr("sta ip", ip_to_s((uint8_t*)&ipInfo.ip.addr)) + ", " ;
+    }
+    else
+      json += jsonStr("sta", "n/a") + ", " ;
+  }
+
+  // todo?
+  // ssid, bssid, rssi, gw, netmask
+  // freq, uptime, spifs
+  
+  json += jsonStr("eot", "eot") ;
+
+  json += " }" ;
+
+  return json ;
 }
 
 const HTTPD::FileInfo HTTPD::_staticUriAll[]
@@ -24,6 +84,7 @@ const HTTPD::FileInfo HTTPD::_staticUriAll[]
    { "/camera-32.png"      , "image/png"                , "camera-32.png"       },
    { "/camera-64.png"      , "image/png"                , "camera-64.png"       },
    { "/esp32-cam-ota.html" , "text/html"                , "esp32-cam-ota.html"  },
+   { "/esp32-cam-info.html", "text/html"                , "esp32-cam-info.html" },
    { "/esp32-cam.css"      , "text/css"                 , "esp32-cam.css"       },
    { "/esp32-cam.js"       , "text/javascript"          , "esp32-cam.js"        },
    { "/settings.txt"       , "text/plain;charset=utf-8" , "settings.txt"        },
@@ -61,6 +122,16 @@ const httpd_uri_t HTTPD::_dynamicUriAll[] =
     "/wifi",
     HTTP_POST,
     wifiSetup
+   },
+   {
+    "/info.json",
+    HTTP_GET,
+    [](httpd_req_t *req)
+    {
+      httpd_resp_set_type(req, "application/json") ;
+      std::string json = infoJson() ;
+      return httpd_resp_send(req, json.data(), json.size()) ;
+    }
    }
   } ;
 
@@ -164,7 +235,6 @@ const httpd_uri_t HTTPD::_dynamicUriFull[] =
 
         return ESP_OK ;
       }
-      if (!strcmp(cmd, "info"  )) return cmdInfo(req) ;
       if (!strcmp(cmd, "reboot"))
       {
         terminator.hastaLaVistaBaby() ;
@@ -227,7 +297,7 @@ bool HTTPD::start()
   Serial.println("HTTPD::start()") ;
   httpd_ssl_config_t cfg = HTTPD_SSL_CONFIG_DEFAULT() ;
 
-  cfg.httpd.max_uri_handlers = 20 ;
+  cfg.httpd.max_uri_handlers = 24 ;
   
   if (!spifs.read("cert.pem", _cert))
   {
@@ -264,6 +334,7 @@ bool HTTPD::start()
     if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
     {
       Serial.println("httpd_register_uri_handler() failed") ;
+      Serial.println(fi._url) ;
       return false ;
     }
   }
@@ -272,6 +343,7 @@ bool HTTPD::start()
     if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
     {
       Serial.println("httpd_register_uri_handler() failed") ;
+      Serial.println(uri.uri) ;
       return false ;
     }
   
@@ -303,8 +375,8 @@ bool HTTPD::mode(HTTPD::Mode mode)
         result = false ;
       }
     }
-
     break ;
+    
   case Mode::full:
     for (const FileInfo &fi : _staticUriFull)
     {
@@ -343,10 +415,10 @@ bool HTTPD::mode(HTTPD::Mode mode)
       if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
       {
         Serial.println("httpd_register_uri_handler() failed") ;
+        Serial.println(fi._url) ;
         result = false ;
       }
     }
-
     break ;
 
   case Mode::full:
@@ -360,6 +432,7 @@ bool HTTPD::mode(HTTPD::Mode mode)
       if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
       {
         Serial.println("httpd_register_uri_handler() failed") ;
+        Serial.println(fi._url) ;
         result = false ;
       }
     }
@@ -368,6 +441,7 @@ bool HTTPD::mode(HTTPD::Mode mode)
       if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
       {
         Serial.println("httpd_register_uri_handler() failed") ;
+        Serial.println(uri.uri) ;
         result = false ;
       }
     break ;

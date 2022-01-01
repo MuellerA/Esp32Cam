@@ -177,6 +177,42 @@ function setupWifi(inputFile)
               })
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Info
+////////////////////////////////////////////////////////////////////////////////
+
+function updateInfo(infoContent, json)
+{
+    while (infoContent.firstChild)
+        infoContent.removeChild(infoContent.firstChild)
+    
+    let table = createHTML(infoContent, 'table', { 'class': 'info'})
+
+    for (const [k, v] of Object.entries(json))
+    {
+        let tr = createHTML(table, 'tr')
+
+        let tdKey = createHTML(tr, 'td', { 'class': 'info'})
+        createText(tdKey, k)
+
+        let tdVal = createHTML(tr, 'td', { 'class': 'info'})
+        createText(tdVal, v)
+    }
+}
+
+function info()
+{
+    const infoContent = document.getElementById("info-content")
+    if (!infoContent)
+        return
+    
+    fetch('info.json', { method: 'get'})
+        .then(response => response.json())
+        .then(json =>
+              {
+                  updateInfo(infoContent, json)
+              })
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // EOF
