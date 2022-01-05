@@ -2,8 +2,7 @@
 // esp32-cam.hpp
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <WiFi.h>
-
+#include <esp_log.h>
 #include <esp_https_server.h>
 #include <esp_camera.h>
 #include <esp_spiffs.h>
@@ -11,6 +10,7 @@
 #include <esp_heap_caps.h>
 #include <esp_wifi.h>
 #include <mbedtls/md.h>
+#include <freertos/timers.h>
 
 #include <string>
 #include <vector>
@@ -88,8 +88,8 @@ public:
 private:
   httpd_handle_t    _httpd{nullptr} ;
   Mode              _mode{Mode::none} ;
-  Data              _cert ;
-  Data              _key ;
+  std::string       _certPem ;
+  std::string       _keyPem ;
   static const FileInfo _staticUriAll[] ;
   static const FileInfo _staticUriWifi[] ;
   static const FileInfo _staticUriFull[] ;
@@ -141,7 +141,7 @@ extern const uint8_t* memmem(const uint8_t *buff, size_t size, const uint8_t *pa
 
 ////////////////////////////////////////////////////////////////////////////////
 
-class Crypt
+class Crypto
 {
 public:
   bool init() ;
@@ -154,18 +154,18 @@ private:
   mbedtls_md_context_t _mdCtx ;
 } ;
 
-extern Crypt crypt ;
+extern Crypto crypto ;
 
 ////////////////////////////////////////////////////////////////////////////////
 
 class Terminator
 {
 public:
+  Terminator() ;
   void hastaLaVistaBaby() ;
-  bool operator()() ;
 
 private:
-  int64_t _time ;
+  TimerHandle_t _timer ;
 } ;
 
 extern Terminator terminator ;
@@ -175,10 +175,8 @@ extern Terminator terminator ;
 extern esp_err_t ota(httpd_req_t *req) ;
 extern esp_err_t wifiSetup(httpd_req_t *req) ;
 
-extern void onWiFiStGotIp(WiFiEvent_t ev, WiFiEventInfo_t info) ;
-extern void onWifiStLostIp(WiFiEvent_t ev, WiFiEventInfo_t info) ;
-extern void onWifiApConnect(WiFiEvent_t ev, WiFiEventInfo_t info) ;
-extern void onWifiApDisconnect(WiFiEvent_t ev, WiFiEventInfo_t info) ;
+void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) ;
+void ip_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) ;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -197,6 +195,7 @@ std::string jsonArr(const std::string &key, const std::vector<std::string> &arr)
 
 std::string mac_to_s(uint8_t *mac) ;
 std::string ip_to_s(uint8_t *ip) ;
+void setupSta(const std::string &ssid, const std::string &pwd) ;
 
 ////////////////////////////////////////////////////////////////////////////////
 // EOF

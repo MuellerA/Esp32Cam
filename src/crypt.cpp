@@ -4,22 +4,22 @@
 
 #include "esp32-cam.hpp"
 
-Crypt crypt ;
+Crypto crypto ;
 
-bool Crypt::init()
+bool Crypto::init()
 {
   mbedtls_md_init(&_mdCtx);
   mbedtls_md_setup(&_mdCtx, mbedtls_md_info_from_type(MBEDTLS_MD_SHA256), 0);
   return true ;
 }
 
-bool Crypt::terminate()
+bool Crypto::terminate()
 {
   mbedtls_md_free(&_mdCtx);
   return true ;
 }
 
-Data Crypt::sha256(const Data &data)
+Data Crypto::sha256(const Data &data)
 {
   uint8_t sha[32] ;
   mbedtls_md_starts(&_mdCtx);
@@ -28,7 +28,7 @@ Data Crypt::sha256(const Data &data)
   return Data(sha, sha+32) ;
 }
 
-bool Crypt::pwdCheck(const Data &pwd)
+bool Crypto::pwdCheck(const Data &pwd)
 {
   std::string salt ;
   std::string pwdHash ;

@@ -8,7 +8,7 @@
 
 esp_err_t ota(httpd_req_t *req)
 {
-  Serial.print("\nOTA POST Requested\n") ;
+  ESP_LOGD("Ota", "POST Requested") ;
 
   httpd_resp_set_type(req, "text/plain") ;
 
@@ -24,7 +24,7 @@ esp_err_t ota(httpd_req_t *req)
   if (!multiPart.get("esp-pwd", espPwd))
     return httpd_resp_sendstr(req, "Content-Disposition: form-data; name=\"esp-pwd\" not found") ;
 
-  if (!crypt.pwdCheck(std::vector<uint8_t>(espPwd._bodyBegin, espPwd._bodyEnd)))
+  if (!crypto.pwdCheck(std::vector<uint8_t>(espPwd._bodyBegin, espPwd._bodyEnd)))
     return httpd_resp_sendstr(req, "invalid password") ;
   
   ////////////////////////////////////////
@@ -73,7 +73,7 @@ esp_err_t ota(httpd_req_t *req)
   }
   
   httpd_resp_sendstr(req, "Upload successful, booting new firmware ...") ;
-  Serial.print("booting new firmware\n") ;
+  ESP_LOGW("Ota", "booting new firmware") ;
 
   terminator.hastaLaVistaBaby() ;
 

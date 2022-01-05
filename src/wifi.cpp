@@ -6,37 +6,64 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void onWiFiStGotIp(WiFiEvent_t ev, WiFiEventInfo_t info)
+void wifi_event_handler(void* arg, esp_event_base_t event_base,
+                        int32_t event_id, void* event_data)
 {
-  Serial.println("got ip") ;
-  WiFi.mode(WIFI_MODE_STA) ;
-  httpd.mode(HTTPD::Mode::full) ;
-
-  tcpip_adapter_ip_info_t ipInfo;
-  tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
-  Serial.println(ip_to_s((uint8_t*)&ipInfo.ip.addr).c_str()) ;
+  if (event_base != WIFI_EVENT)
+  {
+    ESP_LOGE("Wifi", "event handler invalid event_base") ;
+    return ;
+  }
+  
+  switch (event_id)
+  {
+  case WIFI_EVENT_STA_START:
+    esp_wifi_connect();
+    break ;
+  case WIFI_EVENT_STA_DISCONNECTED:
+    esp_wifi_connect();
+    ESP_LOGI("Wifi", "retry to client connect") ;
+    break ;
+  case WIFI_EVENT_AP_STACONNECTED:
+    ESP_LOGI("Wifi", "client connect") ;
+    break ;
+  case WIFI_EVENT_AP_STADISCONNECTED:
+    ESP_LOGI("Wifi", "client disconnect") ;
+    break ;
+  }
 }
 
-void onWifiStLostIp(WiFiEvent_t ev, WiFiEventInfo_t info)
+void ip_event_handler(void* arg, esp_event_base_t event_base,
+                      int32_t event_id, void* event_data)
 {
-  Serial.println("lost ip") ;
-  WiFi.mode(WIFI_MODE_APSTA) ;
-  httpd.mode(HTTPD::Mode::wifi) ;
-}
-
-void onWifiApConnect(WiFiEvent_t ev, WiFiEventInfo_t info)
-{
-  Serial.println("client connect") ;
-}
-
-void onWifiApDisconnect(WiFiEvent_t ev, WiFiEventInfo_t info)
-{
-  Serial.println("client disconnect") ;
+  if (event_base != IP_EVENT)
+  {
+    ESP_LOGE("Wifi", "event handler invalid event_base") ;
+    return ;
+  }
+  
+  switch (event_id)
+  {
+  case IP_EVENT_STA_GOT_IP:
+    {
+      ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+      ESP_LOGI("Wifi", "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+      esp_wifi_set_mode(WIFI_MODE_STA) ;
+      httpd.mode(HTTPD::Mode::full) ;
+    }
+    break ;
+  case IP_EVENT_STA_LOST_IP:
+    {
+      ESP_LOGI("Wifi", "lost ip") ;
+      httpd.mode(HTTPD::Mode::wifi) ;
+      esp_wifi_set_mode(WIFI_MODE_APSTA) ;
+    }
+  }
 }
 
 esp_err_t wifiSetup(httpd_req_t *req)
 {
-  Serial.print("\nWIFI POST Requested\n") ;
+  ESP_LOGD("Wifi", "POST Requested") ;
 
   httpd_resp_set_type(req, "text/plain") ;
 
@@ -62,7 +89,7 @@ esp_err_t wifiSetup(httpd_req_t *req)
   if (espPwd.bodySize() > 64)
     return httpd_resp_sendstr(req, "esp pwd too big") ;
   
-  if (!crypt.pwdCheck(std::vector<uint8_t>(espPwd._bodyBegin, espPwd._bodyEnd)))
+  if (!crypto.pwdCheck(std::vector<uint8_t>(espPwd._bodyBegin, espPwd._bodyEnd)))
     return httpd_resp_sendstr(req, "invalid password") ;
 
   ////////////////////////////////////////
@@ -77,10 +104,17 @@ esp_err_t wifiSetup(httpd_req_t *req)
 
   httpd_resp_sendstr(req, "Upload successful.") ;
 
-  WiFi.disconnect() ;
+  esp_wifi_set_mode(WIFI_MODE_AP);
+  esp_wifi_disconnect() ;
+  httpd.mode(HTTPD::Mode::wifi) ;
+  
   if (ssid.size())
-    WiFi.begin(ssid.c_str(), pwd.c_str()) ;
-
+  {
+    esp_wifi_set_mode(WIFI_MODE_APSTA);
+    setupSta(ssid, pwd) ;
+    esp_wifi_connect() ;
+  }
+  
   return ESP_OK ;
 }
 

@@ -9,6 +9,11 @@
 pio run -t erase
 ```
 
+### Configure ESP IDF Framework (if neccessary)
+```
+pio run -t menuconfig
+```
+
 ### Build & Upload Firmware
 ```
 pio run -t upload
@@ -16,7 +21,7 @@ pio run -t upload
 
 ### Prepare & Upload File System
 
-* Create cert and key (RSA or ECC) for HTTPS (HTTPS is disabled, too many out-of-memory errors)
+* Create cert and key (RSA or ECC) for HTTPS (HTTPS support is broken/disabled, cert is required nevertheless)
   * RSA: ```openssl req -x509 -subj "/CN=ESP32-CAM" -nodes -days 9999 -keyout data/key.pem -out data/cert.pem -newkey rsa:2048```
   * ECC: ```openssl req -x509 -subj "/CN=ESP32-CAM" -nodes -days 9999 -keyout data/key.pem -out data/cert.pem -newkey ec:<(openssl ecparam -name prime256v1)```
 
@@ -36,7 +41,6 @@ pio run -t uploadfs
 ## TODO
 
 * more settings
-* https out of memory???
-* remove Arduino?
+* https
 * record to sdcard
-* spiffs ota
+* spiffs upload

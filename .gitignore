@@ -2,6 +2,8 @@
 *~
 \#*\#
 
+sdkconfig.esp32cam.old
+
 .pio/
 .vscode/
 

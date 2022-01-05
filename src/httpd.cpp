@@ -20,10 +20,10 @@ std::string infoJson()
   publicSettings.get("esp.name", str) ;
   json += jsonStr("name", str) + ", " ;
 
-  //json += jsonInt("total internal heap", heap_caps_get_total_size(MALLOC_CAP_INTERNAL)) + ", " ;
+  json += jsonInt("total internal heap", heap_caps_get_total_size(MALLOC_CAP_INTERNAL)) + ", " ;
   json += jsonInt("free internal heap", heap_caps_get_free_size(MALLOC_CAP_INTERNAL)) + ", " ;
 
-  //json += jsonInt("total externalheap", heap_caps_get_total_size(MALLOC_CAP_SPIRAM)) + ", " ;
+  json += jsonInt("total external heap", heap_caps_get_total_size(MALLOC_CAP_SPIRAM)) + ", " ;
   json += jsonInt("free external heap", heap_caps_get_free_size(MALLOC_CAP_SPIRAM)) + ", " ;
 
   {
@@ -41,7 +41,7 @@ std::string infoJson()
   
   {
     uint8_t mac[6] ;
-    if (esp_wifi_get_mac(ESP_IF_WIFI_AP, mac) == ESP_OK)
+    if (esp_wifi_get_mac(WIFI_IF_AP, mac) == ESP_OK)
     {
       json += jsonStr("ap mac", mac_to_s(mac)) + ", " ;
       tcpip_adapter_ip_info_t ipInfo;
@@ -54,7 +54,7 @@ std::string infoJson()
 
   {
     uint8_t mac[6] ;
-    if (esp_wifi_get_mac(ESP_IF_WIFI_STA, mac) == ESP_OK)
+    if (esp_wifi_get_mac(WIFI_IF_STA, mac) == ESP_OK)
     {
       json += jsonStr("sta mac", mac_to_s(mac)) + ", " ;
       tcpip_adapter_ip_info_t ipInfo;
@@ -65,7 +65,7 @@ std::string infoJson()
       json += jsonStr("sta", "n/a") + ", " ;
   }
 
-  // todo?
+  // more info?
   // ssid, bssid, rssi, gw, netmask
   // freq, uptime, spifs
   
@@ -106,22 +106,26 @@ const httpd_uri_t HTTPD::_dynamicUriAll[] =
    {
     "/",
     HTTP_GET,
-    [](httpd_req_t *req){ return HTTPD::redirect(req, "esp32-cam.html") ; }
+    [](httpd_req_t *req){ return HTTPD::redirect(req, "esp32-cam.html") ; },
+    nullptr
    },
    {
     "/index.html",
     HTTP_GET,
-    [](httpd_req_t *req){ return HTTPD::redirect(req, "esp32-cam.html") ; }
+    [](httpd_req_t *req){ return HTTPD::redirect(req, "esp32-cam.html") ; },
+    nullptr
    },
    {
     "/ota",
     HTTP_POST,
-    ota
+    ota,
+    nullptr
    },
    {
     "/wifi",
     HTTP_POST,
-    wifiSetup
+    wifiSetup,
+    nullptr
    },
    {
     "/info.json",
@@ -131,7 +135,8 @@ const httpd_uri_t HTTPD::_dynamicUriAll[] =
       httpd_resp_set_type(req, "application/json") ;
       std::string json = infoJson() ;
       return httpd_resp_send(req, json.data(), json.size()) ;
-    }
+    },
+    nullptr
    }
   } ;
 
@@ -145,7 +150,7 @@ const httpd_uri_t HTTPD::_dynamicUriFull[] =
       Data data ;
       if (!camera.capture(data))
       {
-        Serial.println("camera caputure failed") ;
+        ESP_LOGE("Camera", "caputure failed") ;
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "camera capture failed") ;
         return ESP_OK ;
       }
@@ -154,7 +159,8 @@ const httpd_uri_t HTTPD::_dynamicUriFull[] =
       httpd_resp_send(req, (const char*) data.data(), data.size()) ;
 
       return ESP_OK ;
-    }
+    },
+    nullptr
    },
    {  
     "/stream",
@@ -168,11 +174,11 @@ const httpd_uri_t HTTPD::_dynamicUriFull[] =
       static std::string contentType{"Content-Type: image/jpeg" + nl} ;
 
       esp_err_t res ;
-      Serial.println(contentTypeDef.c_str()) ;
+      ESP_LOGD("Camera", "%s", contentTypeDef.c_str()) ;
       if ((res = httpd_resp_set_type(req, contentTypeDef.c_str())) != ESP_OK)
         return res ;
 
-      Serial.println(boundary.c_str()) ;
+      ESP_LOGD("Camera", "%s", boundary.c_str()) ;
       if ((res = httpd_resp_send_chunk(req, boundary.data(), boundary.size())) != ESP_OK)
         return res ;
 
@@ -181,7 +187,7 @@ const httpd_uri_t HTTPD::_dynamicUriFull[] =
         Data data ;
         if (!camera.capture(data))
         {
-          Serial.println("camera caputure failed") ;
+          ESP_LOGE("Camera", "caputure failed") ;
           return ESP_FAIL ;
         }
             
@@ -192,15 +198,16 @@ const httpd_uri_t HTTPD::_dynamicUriFull[] =
         str += contentType ;
         str += "Content-Length: " + std::string(length) + nl ;
         str += nl ;
-        Serial.print(str.c_str()) ;
+        ESP_LOGD("Camera", "%s", str.c_str()) ;
         if (((res = httpd_resp_send_chunk(req, str.data(), str.size())) != ESP_OK) ||
             ((res = httpd_resp_send_chunk(req, (const char*) data.data(), data.size())) != ESP_OK) ||
             ((res = httpd_resp_send_chunk(req, boundary.data(), boundary.size())) != ESP_OK))
           return res ;
 
-        delay(1000) ;
+        vTaskDelay(1000 / portTICK_PERIOD_MS) ;
       }
-    }
+    },
+    nullptr
    },
    {
     "/settings.json",
@@ -210,7 +217,8 @@ const httpd_uri_t HTTPD::_dynamicUriFull[] =
       httpd_resp_set_type(req, "application/json") ;
       std::string json = publicSettings.json() ;
       return httpd_resp_send(req, json.data(), json.size()) ;
-    }
+    },
+    nullptr
    },
    {  
     "/cmd",
@@ -245,14 +253,15 @@ const httpd_uri_t HTTPD::_dynamicUriFull[] =
       
       httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "file not found") ;
       return ESP_OK ;
-    }
+    },
+    nullptr
    },
    {
     "/set",
     HTTP_GET,
     [](httpd_req_t *req)
     {
-      Serial.println("/set") ;
+      ESP_LOGD("Httpd", "/set") ;
       char buff[1024] ;
       size_t size = httpd_req_get_url_query_len(req) ;
       if (!size)
@@ -273,7 +282,7 @@ const httpd_uri_t HTTPD::_dynamicUriFull[] =
       std::string key(buff, (ch) - buff) ;
       std::string val(ch+1, (buff+size) - (ch+1)) ;
 
-      Serial.println(("- " + key + " " + val).c_str()) ;
+      ESP_LOGD("Httpd", "%s", ("- " + key + " " + val).c_str()) ;
       
       if (!publicSettings.set(key, val))
       {
@@ -283,7 +292,8 @@ const httpd_uri_t HTTPD::_dynamicUriFull[] =
       
       httpd_resp_send(req, nullptr, 0) ;
       return ESP_OK ;      
-    }
+    },
+    nullptr
    },
   } ;
 
@@ -294,33 +304,37 @@ HTTPD::~HTTPD()
 
 bool HTTPD::start()
 {
-  Serial.println("HTTPD::start()") ;
+  ESP_LOGD("Httpd", "start()") ;
   httpd_ssl_config_t cfg = HTTPD_SSL_CONFIG_DEFAULT() ;
 
   cfg.httpd.max_uri_handlers = 24 ;
   
-  if (!spifs.read("cert.pem", _cert))
+  if (!spifs.read("cert.pem", _certPem))
   {
-    Serial.println("read cert.pem failed") ;
+    ESP_LOGE("Httpd", "read cert.pem failed") ;
     return false ;
   }
-  cfg.cacert_pem = _cert.data() ;
-  cfg.cacert_len = _cert.size() ;
-  
-  if (!spifs.read("key.pem", _key))
-  {
-    Serial.println("read key.pem failed") ;
-    return false ;
-  }
-  cfg.prvtkey_pem = _key.data() ;
-  cfg.prvtkey_len = _key.size() ;
+  cfg.cacert_pem = (const uint8_t*) _certPem.data() ;
+  cfg.cacert_len = _certPem.size() ;
 
-  // out-of-memory in 2nd https connection :-(
+  ESP_LOGV("Httpd", "cert: %s", _certPem.c_str()) ;
+  
+  if (!spifs.read("key.pem", _keyPem))
+  {
+    ESP_LOGE("Httpd", "read key.pem failed") ;
+    return false ;
+  }
+  cfg.prvtkey_pem = (const uint8_t*) _keyPem.data() ;
+  cfg.prvtkey_len = _keyPem.size() ;
+
+  ESP_LOGV("Httpd", "key: %s", _keyPem.c_str()) ;
+
+  // cant get it to work with idf - with arduino: out-of-memory in 2nd https connection :-(
   cfg.transport_mode = HTTPD_SSL_TRANSPORT_INSECURE ; 
   
   if (httpd_ssl_start(&_httpd, &cfg) != ESP_OK)
   {
-    Serial.println("httpd_ssl_start() failed") ;
+    ESP_LOGE("Httpd", "httpd_ssl_start() failed") ;
     return false ;
   }
 
@@ -333,8 +347,7 @@ bool HTTPD::start()
     uri.user_ctx = (void*)&fi ;
     if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
     {
-      Serial.println("httpd_register_uri_handler() failed") ;
-      Serial.println(fi._url) ;
+      ESP_LOGW("Httpd", "httpd_register_uri_handler() failed %s", fi._url) ;
       return false ;
     }
   }
@@ -342,8 +355,7 @@ bool HTTPD::start()
   for (const auto &uri : _dynamicUriAll)
     if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
     {
-      Serial.println("httpd_register_uri_handler() failed") ;
-      Serial.println(uri.uri) ;
+      ESP_LOGW("Httpd", "httpd_register_uri_handler() failed %s", uri.uri) ;
       return false ;
     }
   
@@ -371,7 +383,7 @@ bool HTTPD::mode(HTTPD::Mode mode)
     {
       if (httpd_unregister_uri_handler(_httpd, fi._url, HTTP_GET) != ESP_OK)
       {
-        Serial.println("httpd_unregister_uri_handler() failed") ;
+        ESP_LOGW("Httpd", "httpd_unregister_uri_handler() failed %s", fi._url) ;
         result = false ;
       }
     }
@@ -382,7 +394,7 @@ bool HTTPD::mode(HTTPD::Mode mode)
     {
       if (httpd_unregister_uri_handler(_httpd, fi._url, HTTP_GET) != ESP_OK)
       {
-        Serial.println("httpd_unregister_uri_handler() failed") ;
+        ESP_LOGW("Httpd", "httpd_unregister_uri_handler() failed %s", fi._url) ;
         result = false ;
       }
     }
@@ -390,7 +402,7 @@ bool HTTPD::mode(HTTPD::Mode mode)
     for (const auto &uri : _dynamicUriFull)
       if (httpd_unregister_uri_handler(_httpd, uri.uri, uri.method) != ESP_OK)
       {
-        Serial.println("httpd_unregister_uri_handler() failed") ;
+        ESP_LOGW("Httpd", "httpd_unregister_uri_handler() failed %s", uri.uri) ;
         result = false ;
       }
     break ;
@@ -414,8 +426,7 @@ bool HTTPD::mode(HTTPD::Mode mode)
       uri.user_ctx = (void*)&fi ;
       if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
       {
-        Serial.println("httpd_register_uri_handler() failed") ;
-        Serial.println(fi._url) ;
+        ESP_LOGW("Httpd", "httpd_register_uri_handler() failed %s", fi._url) ;
         result = false ;
       }
     }
@@ -431,8 +442,7 @@ bool HTTPD::mode(HTTPD::Mode mode)
       uri.user_ctx = (void*)&fi ;
       if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
       {
-        Serial.println("httpd_register_uri_handler() failed") ;
-        Serial.println(fi._url) ;
+        ESP_LOGW("Httpd", "httpd_register_uri_handler() failed %s", fi._url) ;
         result = false ;
       }
     }
@@ -440,8 +450,7 @@ bool HTTPD::mode(HTTPD::Mode mode)
     for (const auto &uri : _dynamicUriFull)
       if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
       {
-        Serial.println("httpd_register_uri_handler() failed") ;
-        Serial.println(uri.uri) ;
+        ESP_LOGW("Httpd", "httpd_register_uri_handler() failed %s", uri.uri) ;
         result = false ;
       }
     break ;
@@ -457,8 +466,8 @@ bool HTTPD::stop()
     httpd_ssl_stop(_httpd);
     _httpd = nullptr ;
   }
-  _cert.clear() ;
-  _key .clear() ;
+  _certPem.clear() ;
+  _keyPem .clear() ;
 
   return true ;
 }
@@ -471,7 +480,7 @@ esp_err_t HTTPD::getFile(httpd_req_t *req)
   
   if (!spifs.read(fi._file, data))
   {
-    Serial.println("read file failed") ;
+    ESP_LOGW("Httpd", "read file failed %s", fi._file) ;
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "file not found") ;
     return ESP_OK ;
   }

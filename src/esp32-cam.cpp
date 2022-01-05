@@ -2,6 +2,7 @@
 // esp32-cam.cpp
 ////////////////////////////////////////////////////////////////////////////////
 
+#include <nvs_flash.h>
 #include "esp32-cam.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -157,11 +158,11 @@ SpiFs::SpiFs() : _conf{ .base_path = "/spiffs",
 
 bool SpiFs::init()
 {
-  Serial.println("SpiFs::init()") ;
+  ESP_LOGD("SpiFs", "init()") ;
   
   if (esp_vfs_spiffs_register(&_conf) != ESP_OK)
   {
-    Serial.println("esp_vfs_spiffs_register() failed") ;
+    ESP_LOGE("SpiFs", "esp_vfs_spiffs_register() failed") ;
     return false ;
   }
   return true ;
@@ -273,12 +274,14 @@ Camera::Camera()
 
 bool Camera::init()
 {
-  Serial.println("Camera::init()") ;
+  ESP_LOGD("Camera", "init()") ;
+
   if (esp_camera_init(&_config) != ESP_OK)
   {
-    Serial.println("esp_camera_init() failed") ;
+    ESP_LOGE("Camer", "esp_camera_init() failed") ;
     return false ;
   }
+
   return true ;
 }
 
@@ -303,37 +306,70 @@ bool Camera::capture(Data &data)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Terminator::hastaLaVistaBaby()
+static void terminate(void*)
 {
-  _time = esp_timer_get_time() + 1000000 ;
+  ESP_LOGD("Esp32Cam", "terminate()");
+
+  httpd.stop() ;
+  crypto.terminate() ;
+  publicSettings.terminate() ;
+  privateSettings.terminate() ;
+  camera.terminate() ;
+  spifs.terminate() ;
+
+  esp_event_loop_delete_default() ;
+  esp_netif_deinit() ;
+  nvs_flash_deinit() ;
+  
+  esp_restart() ;
 }
 
-bool Terminator::operator()()
+Terminator::Terminator()
 {
-  return
-    (_time != 0) &&
-    (_time < esp_timer_get_time()) ;
+  _timer = xTimerCreate("Terminator", 1000 / portTICK_PERIOD_MS, pdFALSE, 0, terminate) ;
+}
+
+void Terminator::hastaLaVistaBaby()
+{
+  if (xTimerStart(_timer, 0) != pdPASS)
+  {
+    ESP_LOGE("Esp32Cam", "start termination timer failed") ;
+  }
 }
 
 Terminator terminator ;
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void setupSta(const std::string &ssid, const std::string &pwd)
+{
+  wifi_config_t wifi_config{} ;
+
+  strcpy((char*)wifi_config.sta.ssid, ssid.c_str()) ;
+  strcpy((char*)wifi_config.sta.password, pwd.c_str()) ;
+    
+  wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK ;
+
+  wifi_config.sta.pmf_cfg.capable = true ;
+  wifi_config.sta.pmf_cfg.required = false ;
+    
+  esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
+}
+
 void setup()
 {
-  Serial.begin(115200) ;
-  Serial.println("Setup") ;
+  ESP_LOGD("Esp32Cam", "setup()");
 
   if (!spifs.init() ||
       !camera.init() ||
       !privateSettings.init() ||
       !publicSettings.init() ||
-      !crypt.init())
-    ESP.restart() ;
+      !crypto.init())
+    esp_restart() ;
 
   esp_ota_mark_app_valid_cancel_rollback() ;
   
-  Serial.println("Setup complete") ;
+  ESP_LOGD("Setup", "complete") ;
   
   std::string apSsid, apCountry, stSsid, stPwd, espName ;
   if (!privateSettings.get("wifi.ap-ssid", apSsid) ||
@@ -341,41 +377,79 @@ void setup()
       !privateSettings.get("wifi.st-ssid", stSsid) ||
       !privateSettings.get("wifi.st-pwd", stPwd) ||
       !publicSettings.get("esp.name", espName))
-    ESP.restart() ;
+    esp_restart() ;
 
-  esp_wifi_set_storage(WIFI_STORAGE_RAM) ;
-  WiFi.mode(WIFI_MODE_APSTA) ;
-  WiFi.onEvent(onWiFiStGotIp, SYSTEM_EVENT_STA_GOT_IP) ;
-  WiFi.onEvent(onWifiStLostIp, SYSTEM_EVENT_STA_LOST_IP) ;
-  WiFi.onEvent(onWifiApConnect, SYSTEM_EVENT_AP_STACONNECTED) ;
-  WiFi.onEvent(onWifiApDisconnect, SYSTEM_EVENT_AP_STADISCONNECTED) ;
-  WiFi.softAP(apSsid.c_str()) ;
-  if (stSsid.size())
-    WiFi.begin(stSsid.c_str(), stPwd.c_str()) ;
+  {
+    esp_netif_init() ;
+    esp_event_loop_create_default() ;
+    esp_netif_create_default_wifi_sta() ;
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    esp_wifi_init(&cfg) ;
+    esp_wifi_set_storage(WIFI_STORAGE_RAM) ;
+
+    if (esp_wifi_set_country_code(apCountry.c_str(), true) != ESP_OK)
+    {
+      ESP_LOGE("Esp32CAM", "esp_wifi_set_country_code() failed") ;
+      esp_restart() ;
+    }
+    
+    // ap
+    {
+      wifi_config_t wifi_config{} ;
+
+      strcpy((char*)wifi_config.ap.ssid, apSsid.c_str()) ;
+      wifi_config.ap.ssid_len = 0 ;
+      wifi_config.ap.authmode = WIFI_AUTH_OPEN ;
+      wifi_config.ap.pairwise_cipher = WIFI_CIPHER_TYPE_CCMP ;
+
+      esp_wifi_set_config(WIFI_IF_AP, &wifi_config) ;
+    }
+    
+    // sta
+    if (stSsid.size())
+    {
+      esp_wifi_set_mode(WIFI_MODE_APSTA);
+      setupSta(stSsid, stPwd) ;
+    }
+    else
+      esp_wifi_set_mode(WIFI_MODE_AP);
+    
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+                                                        ESP_EVENT_ANY_ID,
+                                                        &wifi_event_handler,
+                                                        nullptr,
+                                                        nullptr));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
+                                                        IP_EVENT_STA_GOT_IP,
+                                                        &ip_event_handler,
+                                                        nullptr,
+                                                        nullptr));
+
+    esp_wifi_start();
+  }
 
   if (!httpd.start())
-    ESP.restart() ;
-}
-
-void terminate()
-{
-  httpd.stop() ;
-  crypt.terminate() ;
-  publicSettings.terminate() ;
-  privateSettings.terminate() ;
-  camera.terminate() ;
-  spifs.terminate() ;
-
-  ESP.restart() ;
+    esp_restart() ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void loop()
+extern "C"
 {
-  if (terminator())
+  void app_main()
   {
-    terminate() ;
+    ESP_LOGD("Esp32Cam", "appmain()");
+
+    esp_log_level_set("*", ESP_LOG_VERBOSE) ;
+    
+    // nvs -- not used by esp32-cam, but might from used library
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+      nvs_flash_erase();
+      ret = nvs_flash_init();
+    }
+
+    setup() ;
   }
 }
 

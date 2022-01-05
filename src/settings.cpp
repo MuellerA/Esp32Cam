@@ -171,7 +171,7 @@ bool Settings::load()
     if (!e)
       e = text.c_str() + text.size() ;
     std::string key{k, (size_t)(v-k)} ;
-    Serial.println((_fileName + " " + key + " " + std::string(v+1, e-(v+1))).c_str()) ;
+    ESP_LOGD("Settings", "%s %s %s", _fileName.c_str(), key.c_str(), std::string(v+1, e-(v+1)).c_str()) ;
     auto iSetting = _settingByName.find(key) ;
     if (iSetting != _settingByName.end())
       iSetting->second->set(*this, std::string(v+1, e-(v+1))) ;
@@ -341,7 +341,7 @@ bool PublicSettings::init()
   _sensor = esp_camera_sensor_get() ;
   if (!_sensor)
   {
-    Serial.println("esp_camera_sensor_get() failed") ;
+    ESP_LOGE("Settings", "esp_camera_sensor_get() failed") ;
     return false ;
   }
 

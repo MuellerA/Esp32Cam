@@ -154,7 +154,7 @@ bool MultiPart::parse()
   
   size_t contentSize = strtoul(contentLength, nullptr, 10) ;
 
-  uint8_t *_content = (uint8_t*) ps_malloc(contentSize) ;
+  uint8_t *_content = (uint8_t*) malloc(contentSize) ;
   if (!_content)
   {
     httpd_resp_sendstr(_req, "HTTP header \"Content-Length\": too big") ;
