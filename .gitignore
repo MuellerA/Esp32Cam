@@ -7,8 +7,8 @@ sdkconfig.esp32cam.old
 .pio/
 .vscode/
 
-data/cert.pem
-data/key.pem
+data/cert.*
+data/key.*
 data/settings.txt
 data/secret.txt
 

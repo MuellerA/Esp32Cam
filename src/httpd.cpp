@@ -76,32 +76,32 @@ std::string infoJson()
   return json ;
 }
 
-const HTTPD::FileInfo HTTPD::_staticUriAll[]
+const HTTPD::FileInfo HTTPD::_staticUriCommon[]
   {
-   { "/favicon.ico"        , "image/x-icon"             , "camera-40.ico"       },
-   { "/camera.svg"         , "image/svg+xml"            , "camera.svg"          },
-   { "/camera-16.png"      , "image/png"                , "camera-16.png"       },
-   { "/camera-32.png"      , "image/png"                , "camera-32.png"       },
-   { "/camera-64.png"      , "image/png"                , "camera-64.png"       },
-   { "/esp32-cam-ota.html" , "text/html"                , "esp32-cam-ota.html"  },
-   { "/esp32-cam-info.html", "text/html"                , "esp32-cam-info.html" },
-   { "/esp32-cam.css"      , "text/css"                 , "esp32-cam.css"       },
-   { "/esp32-cam.js"       , "text/javascript"          , "esp32-cam.js"        },
-   { "/settings.txt"       , "text/plain;charset=utf-8" , "settings.txt"        },
+   { "/favicon.ico"         , "image/x-icon"             , "camera-40.ico"       },
+   { "/camera.svg"          , "image/svg+xml"            , "camera.svg"          },
+   { "/camera-16.png"       , "image/png"                , "camera-16.png"       },
+   { "/camera-32.png"       , "image/png"                , "camera-32.png"       },
+   { "/camera-64.png"       , "image/png"                , "camera-64.png"       },
+   { "/esp32-cam-ota.html"  , "text/html"                , "esp32-cam-ota.html"  },
+   { "/esp32-cam-info.html" , "text/html"                , "esp32-cam-info.html" },
+   { "/esp32-cam.css"       , "text/css"                 , "esp32-cam.css"       },
+   { "/esp32-cam.js"        , "text/javascript"          , "esp32-cam.js"        },
+   { "/settings.txt"        , "text/plain;charset=utf-8" , "settings.txt"        },
   } ;
 
-const HTTPD::FileInfo HTTPD::_staticUriWifi[]
+const HTTPD::FileInfo HTTPD::_staticUriSetup[]
   {
-   { "/esp32-cam.html"     , "text/html"                , "esp32-cam-wifi.html" },
+   { "/esp32-cam.html"      , "text/html"                , "esp32-cam-setup.html"},
   } ;
 
-const HTTPD::FileInfo HTTPD::_staticUriFull[]
+const HTTPD::FileInfo HTTPD::_staticUriRunning[]
   {
-   { "/esp32-cam.html"     , "text/html"                , "esp32-cam.html"      },
-   { "/esp32-cam-wifi.html", "text/html"                , "esp32-cam-wifi.html" },
+   { "/esp32-cam.html"      , "text/html"                , "esp32-cam.html"      },
+   { "/esp32-cam-setup.html", "text/html"                , "esp32-cam-setup.html"},
   } ;
 
-const httpd_uri_t HTTPD::_dynamicUriAll[] =
+const httpd_uri_t HTTPD::_dynamicUriCommon[] =
   {
    {
     "/",
@@ -122,7 +122,7 @@ const httpd_uri_t HTTPD::_dynamicUriAll[] =
     nullptr
    },
    {
-    "/wifi",
+    "/setup",
     HTTP_POST,
     wifiSetup,
     nullptr
@@ -140,7 +140,7 @@ const httpd_uri_t HTTPD::_dynamicUriAll[] =
    }
   } ;
 
-const httpd_uri_t HTTPD::_dynamicUriFull[] =
+const httpd_uri_t HTTPD::_dynamicUriRunning[] =
   {
    {
     "/capture.jpg",
@@ -309,28 +309,23 @@ bool HTTPD::start()
 
   cfg.httpd.max_uri_handlers = 24 ;
   
-  if (!spifs.read("cert.pem", _certPem))
+  if (!spifs.read("cert.der", _certPem)) // pem does not work - use der
   {
-    ESP_LOGE("Httpd", "read cert.pem failed") ;
+    ESP_LOGE("Httpd", "read cert.der failed") ;
     return false ;
   }
   cfg.cacert_pem = (const uint8_t*) _certPem.data() ;
   cfg.cacert_len = _certPem.size() ;
 
-  ESP_LOGV("Httpd", "cert: %s", _certPem.c_str()) ;
-  
-  if (!spifs.read("key.pem", _keyPem))
+  if (!spifs.read("key.der", _keyPem)) // pem does not work - use der
   {
-    ESP_LOGE("Httpd", "read key.pem failed") ;
+    ESP_LOGE("Httpd", "read key.der failed") ;
     return false ;
   }
   cfg.prvtkey_pem = (const uint8_t*) _keyPem.data() ;
   cfg.prvtkey_len = _keyPem.size() ;
 
-  ESP_LOGV("Httpd", "key: %s", _keyPem.c_str()) ;
-
-  // cant get it to work with idf - with arduino: out-of-memory in 2nd https connection :-(
-  cfg.transport_mode = HTTPD_SSL_TRANSPORT_INSECURE ; 
+  //cfg.transport_mode = HTTPD_SSL_TRANSPORT_INSECURE ; 
   
   if (httpd_ssl_start(&_httpd, &cfg) != ESP_OK)
   {
@@ -338,7 +333,7 @@ bool HTTPD::start()
     return false ;
   }
 
-  for (const FileInfo &fi : _staticUriAll)
+  for (const FileInfo &fi : _staticUriCommon)
   {
     httpd_uri_t uri ;
     uri.uri = fi._url ;
@@ -352,14 +347,14 @@ bool HTTPD::start()
     }
   }
 
-  for (const auto &uri : _dynamicUriAll)
+  for (const auto &uri : _dynamicUriCommon)
     if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
     {
       ESP_LOGW("Httpd", "httpd_register_uri_handler() failed %s", uri.uri) ;
       return false ;
     }
   
-  if (!mode(Mode::wifi))
+  if (!mode(Mode::setup))
     return false ;
 
   return true ;
@@ -378,8 +373,8 @@ bool HTTPD::mode(HTTPD::Mode mode)
   case Mode::none:
     break ;
     
-  case Mode::wifi:
-    for (const FileInfo &fi : _staticUriWifi)
+  case Mode::setup:
+    for (const FileInfo &fi : _staticUriSetup)
     {
       if (httpd_unregister_uri_handler(_httpd, fi._url, HTTP_GET) != ESP_OK)
       {
@@ -389,8 +384,8 @@ bool HTTPD::mode(HTTPD::Mode mode)
     }
     break ;
     
-  case Mode::full:
-    for (const FileInfo &fi : _staticUriFull)
+  case Mode::running:
+    for (const FileInfo &fi : _staticUriRunning)
     {
       if (httpd_unregister_uri_handler(_httpd, fi._url, HTTP_GET) != ESP_OK)
       {
@@ -399,7 +394,7 @@ bool HTTPD::mode(HTTPD::Mode mode)
       }
     }
  
-    for (const auto &uri : _dynamicUriFull)
+    for (const auto &uri : _dynamicUriRunning)
       if (httpd_unregister_uri_handler(_httpd, uri.uri, uri.method) != ESP_OK)
       {
         ESP_LOGW("Httpd", "httpd_unregister_uri_handler() failed %s", uri.uri) ;
@@ -416,8 +411,8 @@ bool HTTPD::mode(HTTPD::Mode mode)
   case Mode::none:
     break ;
 
-  case Mode::wifi:
-    for (const FileInfo &fi : _staticUriWifi)
+  case Mode::setup:
+    for (const FileInfo &fi : _staticUriSetup)
     {
       httpd_uri_t uri ;
       uri.uri = fi._url ;
@@ -432,8 +427,8 @@ bool HTTPD::mode(HTTPD::Mode mode)
     }
     break ;
 
-  case Mode::full:
-    for (const FileInfo &fi : _staticUriFull)
+  case Mode::running:
+    for (const FileInfo &fi : _staticUriRunning)
     {
       httpd_uri_t uri ;
       uri.uri = fi._url ;
@@ -447,7 +442,7 @@ bool HTTPD::mode(HTTPD::Mode mode)
       }
     }
   
-    for (const auto &uri : _dynamicUriFull)
+    for (const auto &uri : _dynamicUriRunning)
       if (httpd_register_uri_handler(_httpd, &uri) != ESP_OK)
       {
         ESP_LOGW("Httpd", "httpd_register_uri_handler() failed %s", uri.uri) ;

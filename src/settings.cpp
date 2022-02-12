@@ -261,7 +261,7 @@ PublicSettings::PublicSettings() :
                new SettingEnum("camera", "framesize",
                                [](Settings &settings, const std::vector<std::string> &enums)
                                {
-                                 size_t framesize = static_cast<PublicSettings&>(settings).sensor().status.framesize ;
+                                 size_t framesize = camera.sensor().status.framesize ;
                                  return (framesize < enums.size()) ? enums[framesize] : "" ;
                                },
                                [](Settings &settings, const std::vector<std::string> &enums, const std::string &value)
@@ -270,7 +270,7 @@ PublicSettings::PublicSettings() :
                                  {
                                    if (enums[i] == value)
                                    {
-                                     sensor_t sensor = static_cast<PublicSettings&>(settings).sensor() ;
+                                     sensor_t sensor = camera.sensor() ;
                                      sensor.set_framesize(&sensor, (framesize_t)i)  ;
                                      return ;
                                    }
@@ -293,63 +293,48 @@ PublicSettings::PublicSettings() :
                                 "UXGA-1600x1200",  // 13
                                }),
                new SettingInt("camera", "quality",
-                              [](Settings &settings) { return static_cast<PublicSettings&>(settings).sensor().status.quality ; },
+                              [](Settings &settings) { return camera.sensor().status.quality ; },
                               [](Settings &settings, const int16_t value)
                               {
-                                sensor_t sensor = static_cast<PublicSettings&>(settings).sensor() ;
+                                sensor_t sensor = camera.sensor() ;
                                 sensor.set_quality(&sensor, value) ;
                               },
                               0, 63 ),
                new SettingInt("camera", "brightness",
-                              [](Settings &settings) { return static_cast<PublicSettings&>(settings).sensor().status.brightness ; },
+                              [](Settings &settings) { return camera.sensor().status.brightness ; },
                               [](Settings &settings, const int16_t value)
                               {
-                                sensor_t sensor = static_cast<PublicSettings&>(settings).sensor() ;
+                                sensor_t sensor = camera.sensor() ;
                                 sensor.set_brightness(&sensor, value) ;
                               },
                               -2, 2 ),
                new SettingInt("camera", "contrast",
-                              [](Settings &settings) { return static_cast<PublicSettings&>(settings).sensor().status.contrast ; },
+                              [](Settings &settings) { return camera.sensor().status.contrast ; },
                               [](Settings &settings, const int16_t value)
                               {
-                                sensor_t sensor = static_cast<PublicSettings&>(settings).sensor() ;
+                                sensor_t sensor = camera.sensor() ;
                                 sensor.set_contrast(&sensor, value) ;
                               },
                               -2, 2 ),
                new SettingInt("camera", "saturation",
-                              [](Settings &settings) { return static_cast<PublicSettings&>(settings).sensor().status.saturation ; },
+                              [](Settings &settings) { return camera.sensor().status.saturation ; },
                               [](Settings &settings, const int16_t value)
                               {
-                                sensor_t sensor = static_cast<PublicSettings&>(settings).sensor() ;
+                                sensor_t sensor = camera.sensor() ;
                                 sensor.set_saturation(&sensor, value) ;
                               },
                               -2, 2 ),
                new SettingInt("camera", "sharpness",
-                              [](Settings &settings) { return static_cast<PublicSettings&>(settings).sensor().status.sharpness ; },
+                              [](Settings &settings) { return camera.sensor().status.sharpness ; },
                               [](Settings &settings, const int16_t value)
                               {
-                                sensor_t sensor = static_cast<PublicSettings&>(settings).sensor() ;
+                                sensor_t sensor = camera.sensor() ;
                                 sensor.set_sharpness(&sensor, value) ;
                               },
                               -2, 2 ),
                })
 {
 }
-
-bool PublicSettings::init()
-{
-  _sensor = esp_camera_sensor_get() ;
-  if (!_sensor)
-  {
-    ESP_LOGE("Settings", "esp_camera_sensor_get() failed") ;
-    return false ;
-  }
-
-  return Settings::init() ;
-}
-
-const sensor_t& PublicSettings::sensor() const { return *_sensor ; }
-sensor_t& PublicSettings::sensor() { return *_sensor ; }
 
 ////////////////////////////////////////////////////////////////////////////////
 // PrivateSettings

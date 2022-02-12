@@ -49,13 +49,13 @@ void ip_event_handler(void* arg, esp_event_base_t event_base,
       ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
       ESP_LOGI("Wifi", "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
       esp_wifi_set_mode(WIFI_MODE_STA) ;
-      httpd.mode(HTTPD::Mode::full) ;
+      httpd.mode(HTTPD::Mode::running) ;
     }
     break ;
   case IP_EVENT_STA_LOST_IP:
     {
       ESP_LOGI("Wifi", "lost ip") ;
-      httpd.mode(HTTPD::Mode::wifi) ;
+      httpd.mode(HTTPD::Mode::setup) ;
       esp_wifi_set_mode(WIFI_MODE_APSTA) ;
     }
   }
@@ -106,7 +106,7 @@ esp_err_t wifiSetup(httpd_req_t *req)
 
   esp_wifi_set_mode(WIFI_MODE_AP);
   esp_wifi_disconnect() ;
-  httpd.mode(HTTPD::Mode::wifi) ;
+  httpd.mode(HTTPD::Mode::setup) ;
   
   if (ssid.size())
   {

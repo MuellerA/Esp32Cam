@@ -74,11 +74,10 @@ function buildMenu()
             let tdSelect   = createHTML(tr, 'td', { 'colspan': 99 })
             let select = createHTML(tdSelect, 'select')
             select.onchange = function() { menuChange('camera.' + k, select.value) }
-            const enums = v['enum']
-            for (let i = 0 ; i < enums.length ; ++i)
+            for (let e of v['enum'])
             {
                 let option = document.createElement('option')
-                option.text = enums[i]
+                option.text = e
                 select.add(option)
             }
             select.value = v.value
@@ -162,12 +161,12 @@ function uploadFirmware(inputFile)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Wifi (esp32-cam-wifi.html)
+// Setup (esp32-cam-setup.html)
 ////////////////////////////////////////////////////////////////////////////////
 
 function setupWifi(inputFile)
 {
-    const msg = document.getElementById('wifi-msg')
+    const msg = document.getElementById('setup-msg')
     const wifiSsid = document.getElementById('wifi-ssid')
     const wifiPwd = document.getElementById('wifi-pwd')
     const espPwd = document.getElementById('esp-pwd')

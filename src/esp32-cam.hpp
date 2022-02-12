@@ -57,8 +57,13 @@ public:
 
   bool capture(Data &data) ;
   
+  const sensor_t& sensor() const ;
+  sensor_t& sensor() ;
+
 private:
   camera_config_t _config ;
+  sensor_t    *_sensor{nullptr} ;
+  SemaphoreHandle_t _inUse ;
 } ;
 
 extern Camera camera ;
@@ -75,7 +80,7 @@ class HTTPD
   } ;
 
 public:
-  enum class Mode { none, wifi, full } ;
+  enum class Mode { none, setup, running } ;
   
   ~HTTPD() ;
   bool start() ;
@@ -90,11 +95,11 @@ private:
   Mode              _mode{Mode::none} ;
   std::string       _certPem ;
   std::string       _keyPem ;
-  static const FileInfo _staticUriAll[] ;
-  static const FileInfo _staticUriWifi[] ;
-  static const FileInfo _staticUriFull[] ;
-  static const httpd_uri_t _dynamicUriAll[] ;
-  static const httpd_uri_t _dynamicUriFull[] ;
+  static const FileInfo _staticUriCommon[] ;      // static content for modes setup & running
+  static const FileInfo _staticUriSetup[] ;       // static content for mode setup
+  static const FileInfo _staticUriRunning[] ;     // static content for mode running 
+  static const httpd_uri_t _dynamicUriCommon[] ;  // dynamic content for modes setup & running
+  static const httpd_uri_t _dynamicUriRunning[] ; // dynamic content for mode running
 } ;
 
 extern HTTPD httpd ;

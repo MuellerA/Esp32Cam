@@ -282,11 +282,25 @@ bool Camera::init()
     return false ;
   }
 
+  _sensor = esp_camera_sensor_get() ;
+  if (!_sensor)
+  {
+    ESP_LOGE("Settings", "esp_camera_sensor_get() failed") ;
+    return false ;
+  }
+
+  _inUse = xSemaphoreCreateMutex() ;
+  
   return true ;
 }
 
+const sensor_t& Camera::sensor() const { return *_sensor ; }
+sensor_t& Camera::sensor() { return *_sensor ; }
+
 bool Camera::terminate()
 {
+  vSemaphoreDelete(_inUse) ;
+
   if (esp_camera_deinit() != ESP_OK)
     return false ;
   
@@ -295,13 +309,18 @@ bool Camera::terminate()
 
 bool Camera::capture(Data &data)
 {
-  camera_fb_t* fb = esp_camera_fb_get() ;
-  if (!fb)
+  if (!xSemaphoreTake(_inUse, 0))
     return false ;
-  data.assign(fb->buf, fb->buf + fb->len) ;
-  esp_camera_fb_return(fb) ;
+  
+  camera_fb_t* fb = esp_camera_fb_get() ;
+  if (fb)
+  {
+    data.assign(fb->buf, fb->buf + fb->len) ;
+    esp_camera_fb_return(fb) ;
+  }
 
-  return true ;
+  xSemaphoreGive(_inUse) ;
+  return fb != nullptr ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -440,7 +459,7 @@ extern "C"
   {
     ESP_LOGD("Esp32Cam", "appmain()");
 
-    esp_log_level_set("*", ESP_LOG_VERBOSE) ;
+    //esp_log_level_set("*", ESP_LOG_VERBOSE) ;
     
     // nvs -- not used by esp32-cam, but might from used library
     esp_err_t ret = nvs_flash_init();

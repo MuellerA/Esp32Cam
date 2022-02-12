@@ -112,14 +112,6 @@ class PublicSettings : public Settings
 {
 public:
   PublicSettings() ;
-  
-  virtual bool init() ;
-  
-  const sensor_t& sensor() const ;
-  sensor_t& sensor() ;
-
-private:
-  sensor_t    *_sensor{nullptr} ;
 } ;
 
 class PrivateSettings : public Settings
