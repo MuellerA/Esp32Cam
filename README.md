@@ -2,6 +2,8 @@
 
 **Work in progress**
 
+Code for AI-Thinker Clone
+
 ## Install
 
 ### Erase ESP flash (once)
@@ -43,6 +45,7 @@ pio run -t uploadfs
 
 ## TODO
 
+* update esp32-camera lib
 * more settings
 * record to sdcard
 * spiffs upload

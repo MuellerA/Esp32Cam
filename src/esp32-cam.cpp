@@ -3,6 +3,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <nvs_flash.h>
+#include <driver/ledc.h>
 #include "esp32-cam.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -241,6 +242,7 @@ bool SpiFs::df(size_t &total, size_t &used)
 
 Camera::Camera()
 {
+  // AI Thinker
   _config.pin_pwdn     = 32 ;         /*!< GPIO pin for camera power down line */
   _config.pin_reset    = -1 ;         /*!< GPIO pin for camera reset line */
   _config.pin_xclk     =  0 ;         /*!< GPIO pin for camera XCLK line */
@@ -267,9 +269,11 @@ Camera::Camera()
   _config.frame_size   = FRAMESIZE_SVGA ; /*!< Size of the output image: FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA  */
 
   _config.jpeg_quality = 5 ;          /*!< Quality of JPEG output. 0-63 lower means higher quality  */
-  _config.fb_count     = 2 ;          /*!< Number of frame buffers to be allocated. If more than one, then each frame will be acquired (double speed)  */
+  _config.fb_count     = 1 ;          /*!< Number of frame buffers to be allocated. If more than one, then each frame will be acquired (double speed)  */
   //_config.fb_location  = CAMERA_FB_IN_PSRAM ;     /*!< The location where the frame buffer will be allocated */
   //_config.grab_mode    = CAMERA_GRAB_WHEN_EMPTY ; /*!< When buffers should be filled */
+
+  _light._pin = 4 ;
 }
 
 bool Camera::init()
@@ -278,7 +282,7 @@ bool Camera::init()
 
   if (esp_camera_init(&_config) != ESP_OK)
   {
-    ESP_LOGE("Camer", "esp_camera_init() failed") ;
+    ESP_LOGE("Camera", "esp_camera_init() failed") ;
     return false ;
   }
 
@@ -291,11 +295,45 @@ bool Camera::init()
 
   _inUse = xSemaphoreCreateMutex() ;
   
+  if (_light._pin > 0)
+  {
+    // Prepare and then apply the LEDC PWM timer configuration
+    ledc_timer_config_t ledc_timer = {
+                                      .speed_mode       = LEDC_LOW_SPEED_MODE,
+                                      .duty_resolution  = LEDC_TIMER_13_BIT,
+                                      .timer_num        = LEDC_TIMER_0,
+                                      .freq_hz          = 5000,
+                                      .clk_cfg          = LEDC_AUTO_CLK
+    };
+    if (ledc_timer_config(&ledc_timer) != ESP_OK)
+    {
+      ESP_LOGE("Camera", "ledc_timer_config() failed") ;
+      return false ;
+    }
+    
+    // Prepare and then apply the LEDC PWM channel configuration
+    ledc_channel_config_t ledc_channel = {
+                                          .gpio_num       = _light._pin,
+                                          .speed_mode     = LEDC_LOW_SPEED_MODE,
+                                          .channel        = LEDC_CHANNEL_0,
+                                          .intr_type      = LEDC_INTR_DISABLE,
+                                          .timer_sel      = LEDC_TIMER_0,
+                                          .duty           = 0,
+                                          .hpoint         = 0
+    };
+    if (ledc_channel_config(&ledc_channel) != ESP_OK)
+    {
+      ESP_LOGE("Camera", "ledc_channel_config() failed") ;
+      return false ;
+    }
+  }
   return true ;
 }
 
 const sensor_t& Camera::sensor() const { return *_sensor ; }
 sensor_t& Camera::sensor() { return *_sensor ; }
+const Camera::Light& Camera::light() const { return _light ; }
+Camera::Light& Camera::light() { return _light ; }
 
 bool Camera::terminate()
 {
@@ -311,7 +349,9 @@ bool Camera::capture(Data &data)
 {
   if (!xSemaphoreTake(_inUse, 0))
     return false ;
-  
+
+  _light.capture(true) ;
+    
   camera_fb_t* fb = esp_camera_fb_get() ;
   if (fb)
   {
@@ -319,8 +359,74 @@ bool Camera::capture(Data &data)
     esp_camera_fb_return(fb) ;
   }
 
+  _light.capture(false) ;
+  
   xSemaphoreGive(_inUse) ;
   return fb != nullptr ;
+}
+
+bool Camera::Light::brightness(uint8_t b)
+{
+  if (_pin < 0)
+    return true ;
+  
+  _brightness = b ;
+  if (_mode == Mode::on)
+  {
+    uint32_t duty = ((uint32_t)_brightness + 1) * 32 - 1 ;
+
+    if (!setDuty(duty) || !updateDuty())
+      return false ;
+  }
+  return true ;
+}
+
+bool Camera::Light::mode(Camera::Light::Mode m)
+{
+  if (_pin < 0)
+    return true ;
+
+  _mode = m ;
+  uint32_t duty = (m == Mode::on) ? (((uint32_t)_brightness + 1) * 32 - 1) : 0 ;
+  
+  if (!setDuty(duty) || !updateDuty())
+    return false ;
+  return true ;
+}
+
+uint8_t Camera::Light::brightness() const { return _brightness ; }
+Camera::Light::Mode Camera::Light::mode() const { return _mode ; }
+
+void Camera::Light::capture(bool on)
+{
+  if (_mode != Camera::Light::Mode::capture)
+    return ;
+
+  uint32_t duty = on ? (((uint32_t)_brightness + 1) * 32 - 1) : 0 ;
+  if (!setDuty(duty) || !updateDuty())
+    return ;
+
+  return ;
+}
+
+bool Camera::Light::setDuty(uint32_t duty)
+{
+  if (ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, duty) != ESP_OK)
+  {
+    ESP_LOGE("Camera", "ledc_set_duty() failed") ;
+    return false ;
+  }
+  return true ;
+}
+
+bool Camera::Light::updateDuty()
+{
+  if (ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0) != ESP_OK)
+  {
+    ESP_LOGE("Camera", "ledc_update_duty() failed") ;
+    return false ;
+  }
+  return true ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

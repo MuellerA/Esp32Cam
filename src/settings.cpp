@@ -292,6 +292,33 @@ PublicSettings::PublicSettings() :
                                 "SXGA-1280x1024",  // 12
                                 "UXGA-1600x1200",  // 13
                                }),
+               new SettingEnum("camera", "flash-mode",
+                               [](Settings &settings, const std::vector<std::string> &enums)
+                               {
+                                 size_t idx = (size_t)(camera.light().mode()) ;
+                                 return (idx < enums.size()) ? enums[idx] : "" ;
+                               },
+                               [](Settings &settings, const std::vector<std::string> &enums, const std::string &value)
+                               {
+                                 for (size_t i = 0, e = enums.size() ; i < e ; ++i)
+                                 {
+                                   if (enums[i] == value)
+                                   {
+                                     camera.light().mode((Camera::Light::Mode)i) ;
+                                     return ;
+                                   }
+                                 }
+                               },
+                               {
+                                "off", "caputre", "on"
+                               }),               
+               new SettingInt("camera", "flash-brightness",
+                              [](Settings &settings) { return camera.light().brightness() ; },
+                              [](Settings &settings, const uint16_t value)
+                              {
+                                camera.light().brightness(value) ;
+                              },
+                              0, 255),
                new SettingInt("camera", "quality",
                               [](Settings &settings) { return camera.sensor().status.quality ; },
                               [](Settings &settings, const int16_t value)

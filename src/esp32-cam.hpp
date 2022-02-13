@@ -51,6 +51,28 @@ extern SpiFs spifs ;
 class Camera
 {
 public:
+  class Light
+  {
+    friend class Camera ;
+  public:
+    enum class Mode { off, capture, on } ;
+
+    bool brightness(uint8_t b) ;
+    bool mode(Mode m) ;
+    uint8_t brightness() const ;
+    Mode mode() const ;
+    
+    void capture(bool) ;
+
+  private:
+    bool setDuty(uint32_t d) ;
+    bool updateDuty() ;
+    
+    Mode _mode{Mode::off} ;
+    uint8_t _brightness{128} ;
+    int _pin{-1} ;
+  } ;
+
   Camera() ;
   bool init() ;
   bool terminate() ;
@@ -60,9 +82,13 @@ public:
   const sensor_t& sensor() const ;
   sensor_t& sensor() ;
 
+  const Light& light() const ;
+  Light& light() ;
+
 private:
   camera_config_t _config ;
   sensor_t    *_sensor{nullptr} ;
+  Light _light ;
   SemaphoreHandle_t _inUse ;
 } ;
 
