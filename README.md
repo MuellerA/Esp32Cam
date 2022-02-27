@@ -28,6 +28,7 @@ pio run -t upload
   * ECC: ```openssl req -x509 -subj "/CN=ESP32-CAM" -nodes -days 9999 -keyout data/key.pem -out data/cert.pem -newkey ec:<(openssl ecparam -name prime256v1)```
   * Convert to DER:
     * ```openssl x509 -in data/cert.pem -outform DER -out data/cert.der```
+    * ```openssl rsa  -in data/key.pem  -outform DER -out data/key.der```
     * ```openssl ec   -in data/key.pem  -outform DER -out data/key.der```
 
 * Copy data/settings.template.txt to data/settings.txt and edit
@@ -45,7 +46,6 @@ pio run -t uploadfs
 
 ## TODO
 
-* update esp32-camera lib
 * more settings
 * record to sdcard
 * spiffs upload
